@@ -3,85 +3,238 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>単位変換 - 避難距離ツール</title>
+<title>避難距離計算ツール</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#0e6a6a">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="避難距離">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <style>
 :root{
   --bg:#f1f3f2;--panel:#fff;--ink:#1b2326;--sub:#5a666b;--line:#d3d9d8;
-  --acc:#0e6a6a;--acc-ink:#fff;
+  --acc:#0e6a6a;--acc-ink:#fff;--warn-bg:#fff2d6;--warn-ink:#6b4500;--warn-line:#e8c880;
+  --mod:#c05000;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#121719;--panel:#1b2225;--ink:#e6ecea;--sub:#9aa7aa;--line:#2e393c;
-  --acc:#4fc1b9;--acc-ink:#06201f;color-scheme:dark;
+  --acc:#4fc1b9;--acc-ink:#06201f;--warn-bg:#3a2d10;--warn-ink:#f2d58f;--warn-line:#6b5420;
+  --mod:#f5a060;color-scheme:dark;
 }}
+:root[data-theme="dark"]{
+  --bg:#121719;--panel:#1b2225;--ink:#e6ecea;--sub:#9aa7aa;--line:#2e393c;
+  --acc:#4fc1b9;--acc-ink:#06201f;--warn-bg:#3a2d10;--warn-ink:#f2d58f;--warn-line:#6b5420;
+  --mod:#f5a060;color-scheme:dark;
+}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);
   font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
-  font-size:16px;line-height:1.5}
-main{max-width:640px;margin:0 auto;
-  padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 72px + 16px)}
-h1{font-size:1.2rem;margin:8px 0 14px}
+  line-height:1.6;font-size:16px}
+main{max-width:640px;margin:0 auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 72px + 16px)}
 
-/* タブ */
-.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;
-  scrollbar-width:none;margin-bottom:14px;-webkit-overflow-scrolling:touch}
-.tabs::-webkit-scrollbar{display:none}
-.tab{flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--line);
-  background:var(--panel);color:var(--sub);font:inherit;font-size:.88rem;cursor:pointer;
-  white-space:nowrap}
-.tab.active{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
-
-/* カード */
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
-  padding:14px 16px;margin-bottom:14px}
-.card h2{font-size:.9rem;color:var(--sub);margin:0 0 12px;font-weight:600}
-
-/* 変換行 */
-.urow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.urow:last-child{margin-bottom:0}
-.ulabel{font-size:.82rem;color:var(--sub);min-width:130px;flex-shrink:0;line-height:1.3}
-.ulabel span{display:block;font-size:.72rem;color:var(--sub);opacity:.7}
-.urow input{flex:1;padding:9px 10px;border:1px solid var(--line);
-  border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;
-  font-size:.95rem;font-variant-numeric:tabular-nums;min-width:0}
-.urow input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.urow input.active-in{border-color:var(--acc)}
-
-/* ボトムナビ */
-.bnav{position:fixed;bottom:0;left:0;right:0;will-change:transform;transform:translateZ(0);background:var(--panel);
-  border-top:1px solid var(--line);display:flex;z-index:100;
-  padding-bottom:env(safe-area-inset-bottom,0px)}
-.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;
+/* ── bottom navigation（将来の機能追加用） ── */
+.bnav{
+  position:fixed;bottom:0;left:0;right:0;
+  will-change:transform;transform:translateZ(0);
+  background:var(--panel);border-top:1px solid var(--line);
+  display:flex;z-index:100;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.bnav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
   padding:8px 4px 6px;text-decoration:none;color:var(--sub);
-  font-size:.68rem;gap:3px;border:none;background:none;cursor:pointer}
+  font-size:.68rem;gap:3px;border:none;background:none;cursor:pointer;
+}
 .bnav-item.active{color:var(--acc)}
 .bnav-icon{font-size:1.3rem;line-height:1}
+h1{font-size:1.25rem;margin:8px 0 4px}
+h2{font-size:1.05rem;margin:0 0 10px}
+.lead{color:var(--sub);font-size:.88rem;margin:0 0 12px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:16px;margin-bottom:14px}
+input,select,button{font:inherit;color:var(--ink)}
+input[type="text"],input[type="number"],input[type="search"],select{
+  padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+input:focus-visible,select:focus-visible,button:focus-visible{
+  outline:2px solid var(--acc);outline-offset:2px}
+button{border:1px solid var(--line);background:var(--panel);
+  padding:8px 14px;border-radius:8px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
 
-/* クリアボタン */
-.clear-btn{margin-top:4px;padding:7px 14px;border-radius:8px;
-  border:1px solid var(--line);background:var(--panel);
-  color:var(--sub);font:inherit;font-size:.85rem;cursor:pointer}
-.clear-btn:active{opacity:.7}
+/* ── item card ── */
+.item{padding:12px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0;padding-top:0}
+.r1{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.r1 .num{font-size:.82rem;color:var(--sub);min-width:1.5em;text-align:right;flex-shrink:0}
+.r1 .nminput{flex:1;min-width:0;width:0}
+.r1 .listbtn{flex-shrink:0;padding:8px 10px;white-space:nowrap;font-size:.85rem}
+.r1 .delbtn{flex-shrink:0;padding:8px 10px}
+.r2{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.re-grp{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.re-grp .lbl,.qty-grp .lbl{font-size:.8rem;color:var(--sub);white-space:nowrap}
+.re-grp input{width:72px}
+.wiki{font-size:.75rem;color:var(--sub);white-space:nowrap}
+.wiki.chg{color:var(--mod);font-weight:700}
+.rbtn{border:none;background:none;padding:2px 4px;font-size:1rem;
+  cursor:pointer;color:var(--mod);display:none}
+.qty-grp{display:flex;align-items:center;gap:5px;flex:1;min-width:150px}
+.qty-grp input{flex:1;min-width:58px}
+.qty-grp select{width:60px;flex-shrink:0}
+
+/* ── action bar ── */
+.actbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+/* ── results ── */
+.res{display:grid;gap:0}
+.resrow{display:flex;justify-content:space-between;align-items:baseline;
+  gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.resrow:first-child{border-top:0}
+.resrow .nm{font-weight:600}
+.resrow .nt{display:block;font-size:.78rem;color:var(--sub);font-weight:400}
+.dist{font-size:1.9rem;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--acc);white-space:nowrap}
+.dist small{font-size:.9rem;color:var(--sub);font-weight:400}
+.meta{font-size:.82rem;color:var(--sub);white-space:pre-line;margin-top:10px}
+.err{color:#b3261e;font-size:.88rem;min-height:1.2em;margin-top:6px}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);
+  border-radius:8px;padding:10px 12px;font-size:.85rem}
+.empty{color:var(--sub);font-size:.92rem;padding:8px 0}
+
+/* ── checkbox row ── */
+.cb-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;
+  background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:8px;
+  padding:10px 12px;user-select:none}
+.cb-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--acc);
+  cursor:pointer;flex-shrink:0}
+.cb-label{font-size:.92rem;font-weight:600;color:var(--warn-ink)}
+.cb-note{font-size:.78rem;color:var(--warn-ink);opacity:.8}
+/* ── ref table ── */
+details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:none;padding:2px 0}
+.reftbl{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:10px}
+.reftbl th{color:var(--sub);font-weight:600;text-align:left;
+  padding:2px 8px 6px 0;border-bottom:1px solid var(--line)}
+.reftbl td{padding:4px 8px 4px 0;border-top:1px solid var(--line)}
+.reftbl td:nth-child(2){font-variant-numeric:tabular-nums;text-align:right;padding-right:16px}
+.ovf{overflow-x:auto}
+
+/* ── modal bottom sheet ── */
+#modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.48);
+  z-index:300;display:none;align-items:flex-end;
+}
+#modal-overlay.open{display:flex}
+#modal-sheet{
+  background:var(--panel);border-radius:16px 16px 0 0;
+  width:100%;max-height:75vh;
+  display:flex;flex-direction:column;
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));
+}
+#modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+#modal-header span{font-weight:600;font-size:1rem}
+#modal-header button{padding:6px 10px}
+#modal-search-inp{
+  width:100%;margin-bottom:10px;
+  padding:10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--ink);font:inherit;
+}
+#modal-search-inp:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#modal-list{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.mitem{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:13px 6px;border-top:1px solid var(--line);cursor:pointer;gap:12px;
+}
+.mitem:first-child{border-top:0}
+.mitem:active,.mitem:hover{background:var(--bg);border-radius:6px;margin:0 -6px;padding:13px 12px}
+.mitem-name{flex:1;font-size:.95rem}
+.mitem-re{font-size:.8rem;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.no-match{color:var(--sub);font-size:.9rem;padding:16px 0;text-align:center}
 </style>
 </head>
 <body>
 
+<!-- ── modal ── -->
+<div id="modal-overlay" role="dialog" aria-modal="true" aria-label="爆薬選択">
+  <div id="modal-sheet">
+    <div id="modal-header">
+      <span>爆薬を選択</span>
+      <button type="button" id="modal-close">✕ 閉じる</button>
+    </div>
+    <input type="search" id="modal-search-inp" placeholder="名前で絞り込み…" autocomplete="off">
+    <div id="modal-list"></div>
+  </div>
+</div>
+
 <main>
-  <h1>単位変換</h1>
-  <div class="tabs" id="tabs" role="tablist"></div>
-  <div id="cards"></div>
-  <button class="clear-btn" id="clearBtn" type="button">全てクリア</button>
+  <h1>避難距離計算ツール</h1>
+  <p class="lead">爆薬の質量をTNT換算し、リューデンベルグの式でK値ごとの距離を求めます。</p>
+
+  <section>
+    <h2>1. 入力</h2>
+    <p class="lead" style="margin-bottom:6px">
+      爆薬名は直接入力(手打ち)か「リスト」ボタンから選択。<br>
+      RE係数はWiki基準値が自動入力されます。自由に変更でき、ページ再読み込みで基準値に戻ります。
+    </p>
+    <div id="items"></div>
+    <div class="actbar">
+      <button id="addItem" type="button" class="primary">+ 爆薬を追加</button>
+      <button id="resetAll" type="button">リセット</button>
+    </div>
+    <div class="err" id="err" role="alert"></div>
+  </section>
+
+  <section>
+    <h2>2. 結果（爆風）</h2>
+    <label class="cb-row">
+      <input type="checkbox" id="cb-multi">
+      <span class="cb-label">複数爆薬の同時爆轟補正 ×1.33</span>
+      <span class="cb-note">※出典未確認・実務経験則</span>
+    </label>
+    <div id="out"><div class="empty">爆薬と数量を入力すると距離が表示されます。</div></div>
+    <p class="meta" id="meta"></p>
+  </section>
+
+  <section>
+    <h2>3. 破片飛散距離（未実装）</h2>
+    <div class="warn">HFDR・MFDRの式は出典確認待ちのため未実装です。文献確認でき次第追加します。</div>
+  </section>
+
+  <section>
+    <h2>比効力 参照表</h2>
+    <p class="lead">出典: Wikipedia – TNT equivalent (RE factor)。セッション中に変更した値はページ再読み込みで基準値に戻ります。</p>
+    <details>
+      <summary>一覧を表示 ▾</summary>
+      <div class="ovf">
+        <table class="reftbl">
+          <thead><tr><th>爆薬名</th><th>RE</th><th>備考</th></tr></thead>
+          <tbody id="reftbody"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <h2>計算式・注意</h2>
+    <p style="font-size:.85rem;color:var(--sub);margin:0 0 10px">
+      W<sub>TNT</sub> = Σ(質量kg × RE係数) ／
+      W<sub>lb</sub> = W<sub>TNT</sub> ÷ 0.45359237 ／
+      D = K × W<sub>lb</sub><sup>1/3</sup> (m、切り上げ)<br>
+      K=16: 米軍K50 ft/lb<sup>1/3</sup>(IBD相当) ／
+      K=61: 米軍K197(実務値・区分名未確認) ／
+      K=100: 米軍K328(窓ガラス破損確率)
+    </p>
+    <div class="warn">爆風のみ対象。破片・地形・遮蔽物・防護壁は考慮しません。結果は目安です。</div>
+  </section>
 </main>
 
-<!-- ボトムナビ -->
+<!-- ボトムナビ：将来の機能追加はここに <a class="bnav-item" href="xxx.html"> を追加 -->
 <nav class="bnav" aria-label="メインナビゲーション">
-  <a class="bnav-item" href="./index.html">
+  <a class="bnav-item active" href="./index.html" aria-current="page">
     <span class="bnav-icon" aria-hidden="true">📏</span>
     <span>計算</span>
   </a>
@@ -89,172 +242,288 @@ h1{font-size:1.2rem;margin:8px 0 14px}
     <span class="bnav-icon" aria-hidden="true">🪣</span>
     <span>土嚢</span>
   </a>
-  <a class="bnav-item active" href="./convert.html" aria-current="page">
+  <a class="bnav-item" href="./convert.html">
     <span class="bnav-icon" aria-hidden="true">🔄</span>
     <span>変換</span>
   </a>
 </nav>
 
 <script>
-// ── 変換カテゴリ定義 ──────────────────────────
-// factor: 基準単位(SI)への換算値
-const CATS = [
-  {
-    id:'length', label:'長さ',
-    units:[
-      {label:'inch',    sub:'インチ',     factor:0.0254},
-      {label:'ft',      sub:'フィート',   factor:0.3048},
-      {label:'yard',    sub:'ヤード',     factor:0.9144},
-      {label:'mm',      sub:'ミリメートル',factor:0.001},
-      {label:'cm',      sub:'センチメートル',factor:0.01},
-      {label:'m',       sub:'メートル',   factor:1},
-    ]
-  },
-  {
-    id:'weight', label:'重さ',
-    units:[
-      {label:'grain',   sub:'グレーン(火薬)',factor:0.00006479891},
-      {label:'oz',      sub:'オンス',     factor:0.028349523},
-      {label:'lb',      sub:'ポンド',     factor:0.45359237},
-      {label:'g',       sub:'グラム',     factor:0.001},
-      {label:'kg',      sub:'キログラム', factor:1},
-    ]
-  },
-  {
-    id:'velocity', label:'速度',
-    units:[
-      {label:'ft/s',    sub:'フィート毎秒',factor:0.3048},
-      {label:'m/s',     sub:'メートル毎秒',factor:1},
-      {label:'km/h',    sub:'キロ毎時',   factor:0.27778},
-    ]
-  },
-  {
-    id:'energy', label:'エネルギー',
-    units:[
-      {label:'ft·lb',   sub:'フートポンド(破片危険閾値=58)',factor:1.355818},
-      {label:'J',       sub:'ジュール',   factor:1},
-      {label:'kJ',      sub:'キロジュール',factor:1000},
-    ]
-  },
-  {
-    id:'pressure', label:'圧力',
-    units:[
-      {label:'psi',     sub:'重量ポンド毎平方インチ',factor:6894.76},
-      {label:'kPa',     sub:'キロパスカル',factor:1000},
-      {label:'MPa',     sub:'メガパスカル',factor:1000000},
-      {label:'atm',     sub:'気圧',       factor:101325},
-    ]
-  },
-  {
-    id:'area', label:'面積',
-    units:[
-      {label:'in²',     sub:'平方インチ', factor:0.00064516},
-      {label:'ft²',     sub:'平方フィート',factor:0.092903},
-      {label:'cm²',     sub:'平方センチ', factor:0.0001},
-      {label:'m²',      sub:'平方メートル',factor:1},
-    ]
-  },
+// Service Worker 登録（PWAオフライン対応）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.warn('SW registration failed:', e));
+  });
+}
+
+const $ = id => document.getElementById(id);
+
+const CFG = {
+  LB: 0.45359237,
+  KS: [
+    { label:'小 (IBD相当)',            k:16,  note:'米軍K50・区分名要確認' },
+    { label:'中 (実務値)',              k:61,  note:'米軍K197・区分名未確認' },
+    { label:'大 (窓ガラス破損確率)',     k:100, note:'米軍K328' }
+  ]
+};
+
+const EX = [
+  {n:'Ammonium nitrate (AN)',              c:0.32},
+  {n:'Mercury(II) fulminate',              c:0.51},
+  {n:'Black powder',                       c:0.55},
+  {n:'Hexamine dinitrate (HDN)',            c:0.60},
+  {n:'Dinitrobenzene (DNB)',               c:0.60},
+  {n:'HMTD (hexamine peroxide)',            c:0.74},
+  {n:'ANFO',                               c:0.74},
+  {n:'Urea nitrate',                       c:0.77},
+  {n:'TATP (acetone peroxide)',             c:0.80},
+  {n:'Tovex Extra (AN water gel)',          c:0.80},
+  {n:'Hydromite 600 (AN water emulsion)',   c:0.80},
+  {n:'ANNMAL',                             c:0.87},
+  {n:'Amatol (50% TNT + 50% AN)',          c:0.91},
+  {n:'Nitroguanidine',                     c:1.04, note:'ballistic mortar'},
+  {n:'TNT',                                c:1.00},
+  {n:'Hexanitrostilbene (HNS)',             c:1.05},
+  {n:'Nitrourea',                          c:1.05},
+  {n:'Tritonal (80% TNT + 20% Al)',        c:1.05},
+  {n:'Nickel hydrazine nitrate (NHN)',      c:1.05},
+  {n:'Amatol (80% TNT + 20% AN)',          c:1.10},
+  {n:'Nitrocellulose (guncotton)',          c:1.10},
+  {n:'Nitromethane (NM)',                   c:1.10},
+  {n:'PBXW-126',                           c:1.10},
+  {n:'Diethylene glycol dinitrate (DEGDN)', c:1.17},
+  {n:'TATB',                               c:1.17},
+  {n:'Picric acid (TNP)',                  c:1.17},
+  {n:'Trinitrobenzene (TNB)',               c:1.20},
+  {n:'Tetrytol (70% Tetryl + 30% TNT)',   c:1.20},
+  {n:"Dynamite, Nobel's (75% NG)",         c:1.25},
+  {n:'Tetryl',                             c:1.25},
+  {n:'Torpex / HBX',                       c:1.30},
+  {n:'Composition B',                      c:1.33},
+  {n:'Composition C-3 (78% RDX)',          c:1.33},
+  {n:'Pentolite (56% PETN + 44% TNT)',    c:1.33},
+  {n:'Composition C-4 (91% RDX)',          c:1.34},
+  {n:'Semtex 1A',                          c:1.35},
+  {n:'Hydrazine nitrate',                  c:1.42},
+  {n:'Nitroglycerin (NG)',                 c:1.54},
+  {n:'Octol (80% HMX + 19% TNT)',         c:1.54},
+  {n:'Nitrotriazolone (NTO)',              c:1.60},
+  {n:'Gelignite',                          c:1.60},
+  {n:'Composition A-5 (98% RDX)',          c:1.60},
+  {n:'Erythritol tetranitrate (ETN)',      c:1.60},
+  {n:'RDX (Hexogen)',                      c:1.60},
+  {n:'PETN (Penthrite)',                   c:1.66},
+  {n:'MEDINA',                             c:1.70},
+  {n:'HMX (Octogen, grade B)',             c:1.70},
+  {n:'Hexanitrobenzene (HNB)',             c:1.80},
+  {n:'CL-20 (HNIW)',                       c:1.90},
+  {n:'Octanitrocubane (ONC)',              c:2.38},
 ];
 
-let activeCat = 0;
-let inputRefs = []; // {input, factor}[]
-
-// ── タブ生成 ────────────────────────────────
-const tabsEl  = document.getElementById('tabs');
-const cardsEl = document.getElementById('cards');
-
-CATS.forEach((cat, i) => {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'tab' + (i === 0 ? ' active' : '');
-  btn.textContent = cat.label;
-  btn.setAttribute('role', 'tab');
-  btn.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
-  btn.addEventListener('click', () => selectCat(i));
-  tabsEl.appendChild(btn);
+// Build reference table
+EX.forEach(e=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${e.n}</td><td>${e.c.toFixed(2)}</td>`+
+    `<td style="color:var(--sub);font-size:.8rem">${e.note||'Wikipedia – TNT equivalent'}</td>`;
+  $('reftbody').appendChild(tr);
 });
 
-// ── カード生成 ──────────────────────────────
-function buildCards() {
-  cardsEl.replaceChildren();
-  inputRefs = [];
-  const cat = CATS[activeCat];
-  const card = document.createElement('div');
-  card.className = 'card';
-  const h2 = document.createElement('h2');
-  h2.textContent = cat.label;
-  card.appendChild(h2);
+/* ═══════════════════════════════════
+   Modal logic
+═══════════════════════════════════ */
+let modalTarget = null;
 
-  cat.units.forEach(unit => {
-    const row = document.createElement('div');
-    row.className = 'urow';
-
-    const lbl = document.createElement('label');
-    lbl.className = 'ulabel';
-    lbl.innerHTML = unit.label + (unit.sub ? `<span>${unit.sub}</span>` : '');
-
-    const inp = document.createElement('input');
-    inp.type = 'number';
-    inp.inputMode = 'decimal';
-    inp.step = 'any';
-    inp.placeholder = '0';
-    inp.setAttribute('aria-label', unit.label);
-
-    const ref = { input: inp, factor: unit.factor };
-    inputRefs.push(ref);
-
-    inp.addEventListener('focus', () => {
-      inputRefs.forEach(r => r.input.classList.remove('active-in'));
-      inp.classList.add('active-in');
-    });
-    inp.addEventListener('input', () => onInput(ref));
-
-    lbl.appendChild(inp); // label wraps input for tap area
-    // Actually, separate label and input for better layout
-    const lbl2 = document.createElement('span');
-    lbl2.className = 'ulabel';
-    lbl2.innerHTML = unit.label + (unit.sub ? `<span>${unit.sub}</span>` : '');
-
-    row.append(lbl2, inp);
-    card.appendChild(row);
-  });
-
-  cardsEl.appendChild(card);
+function openModal(idx){
+  modalTarget = idx;
+  $('modal-search-inp').value = '';
+  renderModalList('');
+  $('modal-overlay').classList.add('open');
+  $('modal-search-inp').focus();
 }
-
-// ── 変換ロジック ────────────────────────────
-function onInput(srcRef) {
-  const v = parseFloat(srcRef.input.value);
-  if (isNaN(v) || srcRef.input.value.trim() === '') {
-    inputRefs.forEach(r => { if (r !== srcRef) r.input.value = ''; });
-    return;
+function closeModal(){
+  $('modal-overlay').classList.remove('open');
+  modalTarget = null;
+}
+function renderModalList(q){
+  const list=$('modal-list');
+  list.replaceChildren();
+  const term=q.toLowerCase();
+  const filtered=EX.filter(e=>!term||e.n.toLowerCase().includes(term));
+  if(!filtered.length){
+    const d=document.createElement('div'); d.className='no-match';
+    d.textContent='該当する爆薬が見つかりません'; list.appendChild(d); return;
   }
-  const baseVal = v * srcRef.factor;
-  inputRefs.forEach(r => {
-    if (r === srcRef) return;
-    const converted = baseVal / r.factor;
-    // 有効数字6桁で表示、小さい値は指数表記を避ける
-    r.input.value = +converted.toPrecision(6);
+  filtered.forEach(e=>{
+    const d=document.createElement('div'); d.className='mitem';
+    d.setAttribute('role','button'); d.tabIndex=0;
+    const nm=document.createElement('span'); nm.className='mitem-name'; nm.textContent=e.n;
+    const re=document.createElement('span'); re.className='mitem-re'; re.textContent='RE '+e.c.toFixed(2);
+    d.append(nm,re);
+    const pick=()=>{
+      if(modalTarget===null) return;
+      const it=items[modalTarget];
+      it.name=e.n; it.wikiCoef=e.c; it.coef=e.c;
+      closeModal(); renderItems(); calc();
+    };
+    d.addEventListener('click',pick);
+    d.addEventListener('keydown',ev=>{ if(ev.key==='Enter'||ev.key===' ') pick(); });
+    list.appendChild(d);
+  });
+}
+$('modal-search-inp').addEventListener('input',e=>renderModalList(e.target.value));
+$('modal-close').addEventListener('click',closeModal);
+$('modal-overlay').addEventListener('click',e=>{ if(e.target===$('modal-overlay')) closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+/* ═══════════════════════════════════
+   Items
+═══════════════════════════════════ */
+const mkItem=()=>({name:'',coef:'',wikiCoef:null,qty:'',unit:'kg'});
+const findEx=n=>EX.find(e=>e.n===n)||null;
+let items=[mkItem()];
+
+function renderItems(){
+  const box=$('items');
+  box.replaceChildren();
+  items.forEach((it,idx)=>{
+    const card=document.createElement('div'); card.className='item';
+
+    /* Row 1 */
+    const r1=document.createElement('div'); r1.className='r1';
+
+    const num=document.createElement('span'); num.className='num';
+    num.textContent=(idx+1)+'.';
+
+    const nmInp=document.createElement('input');
+    nmInp.type='text'; nmInp.className='nminput';
+    nmInp.placeholder='爆薬名を手入力';
+    nmInp.value=it.name;
+    nmInp.setAttribute('aria-label','爆薬名 '+(idx+1));
+    nmInp.addEventListener('input',()=>{
+      it.name=nmInp.value;
+      const m=findEx(nmInp.value);
+      if(m){ it.wikiCoef=m.c; if(it.coef===''||it.coef===it.wikiCoef){it.coef=m.c;reInp.value=m.c;} }
+      else { it.wikiCoef=null; }
+      refreshWiki(); calc();
+    });
+
+    const listB=document.createElement('button');
+    listB.type='button'; listB.className='listbtn';
+    listB.textContent='リスト';
+    listB.setAttribute('aria-label','リストから爆薬を選択');
+    listB.addEventListener('click',()=>openModal(idx));
+
+    const delB=document.createElement('button');
+    delB.type='button'; delB.className='delbtn'; delB.textContent='×';
+    delB.setAttribute('aria-label',(idx+1)+'行目を削除');
+    delB.disabled=items.length===1;
+    delB.addEventListener('click',()=>{ items.splice(idx,1); renderItems(); calc(); });
+
+    r1.append(num,nmInp,listB,delB);
+
+    /* Row 2 */
+    const r2=document.createElement('div'); r2.className='r2';
+
+    // RE
+    const reG=document.createElement('div'); reG.className='re-grp';
+    const reL=document.createElement('span'); reL.className='lbl'; reL.textContent='RE';
+    const reInp=document.createElement('input');
+    reInp.type='number'; reInp.step='any'; reInp.min='0';
+    reInp.placeholder='係数'; reInp.setAttribute('aria-label','RE係数 '+(idx+1));
+    if(it.coef!=='') reInp.value=it.coef;
+    const wkSp=document.createElement('span'); wkSp.className='wiki';
+    const rbtn=document.createElement('button');
+    rbtn.type='button'; rbtn.className='rbtn'; rbtn.textContent='↺';
+    rbtn.title='Wiki基準値に戻す';
+
+    function refreshWiki(){
+      if(it.wikiCoef!=null){
+        const chg=reInp.value!==''&&Number(reInp.value)!==it.wikiCoef;
+        wkSp.textContent='Wiki:'+it.wikiCoef.toFixed(2);
+        wkSp.className='wiki'+(chg?' chg':'');
+        rbtn.style.display=chg?'':'none';
+      } else { wkSp.textContent=''; rbtn.style.display='none'; }
+    }
+    reInp.addEventListener('input',()=>{ it.coef=reInp.value===''?'':Number(reInp.value); refreshWiki(); calc(); });
+    rbtn.addEventListener('click',()=>{ if(it.wikiCoef!=null){it.coef=it.wikiCoef;reInp.value=it.wikiCoef;refreshWiki();calc();} });
+    reG.append(reL,reInp,wkSp,rbtn);
+
+    // Qty
+    const qG=document.createElement('div'); qG.className='qty-grp';
+    const qL=document.createElement('span'); qL.className='lbl'; qL.textContent='数量';
+    const qInp=document.createElement('input');
+    qInp.type='number'; qInp.inputMode='decimal'; qInp.min='0'; qInp.step='any';
+    qInp.placeholder='数量'; qInp.setAttribute('aria-label','数量 '+(idx+1));
+    if(it.qty!=='') qInp.value=it.qty;
+    qInp.addEventListener('input',()=>{ it.qty=qInp.value; calc(); });
+    const uSel=document.createElement('select');
+    uSel.setAttribute('aria-label','単位 '+(idx+1));
+    ['kg','lb'].forEach(u=>{ const o=document.createElement('option');
+      o.value=u;o.textContent=u;if(u===it.unit)o.selected=true;uSel.appendChild(o); });
+    uSel.addEventListener('change',()=>{ it.unit=uSel.value; calc(); });
+    qG.append(qL,qInp,uSel);
+
+    r2.append(reG,qG);
+    card.append(r1,r2);
+    box.appendChild(card);
+    refreshWiki();
   });
 }
 
-// ── タブ切り替え ────────────────────────────
-function selectCat(i) {
-  activeCat = i;
-  tabsEl.querySelectorAll('.tab').forEach((btn, j) => {
-    btn.classList.toggle('active', j === i);
-    btn.setAttribute('aria-selected', j === i ? 'true' : 'false');
+/* ═══════════════════════════════════
+   Calc
+═══════════════════════════════════ */
+function calc(){
+  const err=$('err'),out=$('out'),meta=$('meta');
+  err.textContent=''; meta.textContent='';
+  const used=items.filter(it=>it.name.trim()||it.qty!=='');
+  if(!used.length){ out.innerHTML='<div class="empty">爆薬と数量を入力すると距離が表示されます。</div>'; return; }
+  let wTnt=0; const parts=[];
+  for(const it of used){
+    const no=items.indexOf(it)+1;
+    if(!it.name.trim()){ err.textContent=no+'行目: 爆薬名を入力してください。'; out.replaceChildren(); return; }
+    const q=Number(it.qty);
+    if(it.qty===''||!(q>0)){ err.textContent=no+'行目: 数量は0より大きい値を入力してください。'; out.replaceChildren(); return; }
+    const coef=Number(it.coef);
+    if(it.coef===''||!(coef>0)){ err.textContent=no+'行目「'+it.name+'」: RE係数を入力してください。'; out.replaceChildren(); return; }
+    const kg=it.unit==='lb'?q*CFG.LB:q;
+    const w=kg*coef; wTnt+=w;
+    parts.push(it.name+' '+q+' '+it.unit+' × RE'+coef+' → '+w.toPrecision(4)+' kg TNT');
+  }
+  const wLb=wTnt/CFG.LB, cube=Math.cbrt(wLb);
+  const multi = $('cb-multi').checked ? 1.33 : 1;
+  out.replaceChildren();
+  const wrap=document.createElement('div'); wrap.className='res';
+  CFG.KS.forEach(lv=>{
+    const d=Math.ceil(lv.k*cube*multi);
+    const row=document.createElement('div'); row.className='resrow';
+    const left=document.createElement('div'); left.className='nm'; left.textContent=lv.label;
+    const nt=document.createElement('span'); nt.className='nt'; nt.textContent='K='+lv.k+' ('+lv.note+')';
+    left.appendChild(nt);
+    const right=document.createElement('div'); right.className='dist';
+    right.textContent=d.toLocaleString('ja-JP');
+    const u=document.createElement('small'); u.textContent=' m'; right.appendChild(u);
+    row.append(left,right); wrap.appendChild(row);
   });
-  buildCards();
+  out.appendChild(wrap);
+  meta.textContent=parts.join('\n')+'\n合計 W_TNT = '+wTnt.toPrecision(4)+' kg ('+wLb.toPrecision(4)+' lb)';
 }
 
-// ── クリア ───────────────────────────────────
-document.getElementById('clearBtn').addEventListener('click', () => {
-  inputRefs.forEach(r => { r.input.value = ''; r.input.classList.remove('active-in'); });
+$('cb-multi').addEventListener('change', calc);
+
+$('addItem').addEventListener('click',()=>{
+  items.push(mkItem()); renderItems();
+  const last=[...$('items').querySelectorAll('.nminput')].pop();
+  if(last) last.focus();
+});
+$('resetAll').addEventListener('click',()=>{
+  if(items.some(it=>it.name||it.qty)&&!confirm('入力をすべてリセットしますか？')) return;
+  items=[mkItem()]; renderItems(); calc();
 });
 
-// ── 初期描画 ────────────────────────────────
-buildCards();
+renderItems(); calc();
 </script>
 </body>
 </html>
