@@ -1,33 +1,391 @@
-const CACHE = 'evac-v1';
-const FILES = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>土嚢計算 - 避難距離ツール</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0e6a6a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<style>
+:root{
+  --bg:#f1f3f2;--panel:#fff;--ink:#1b2326;--sub:#5a666b;--line:#d3d9d8;
+  --acc:#0e6a6a;--acc-ink:#fff;
+  --warn-bg:#fff2d6;--warn-ink:#6b4500;--warn-line:#e8c880;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121719;--panel:#1b2225;--ink:#e6ecea;--sub:#9aa7aa;--line:#2e393c;
+  --acc:#4fc1b9;--acc-ink:#06201f;
+  --warn-bg:#3a2d10;--warn-ink:#f2d58f;--warn-line:#6b5420;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  font-size:16px;line-height:1.6}
+main{max-width:640px;margin:0 auto;
+  padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 72px + 16px)}
+h1{font-size:1.2rem;margin:8px 0 4px}
+h2{font-size:1rem;margin:0 0 10px;color:var(--ink)}
+.lead{color:var(--sub);font-size:.85rem;margin:0 0 14px}
+
+section{background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:14px 16px;margin-bottom:12px}
+label{display:block;font-size:.82rem;color:var(--sub);margin-bottom:4px}
+select,input[type="number"]{
+  width:100%;padding:9px;border:1px solid var(--line);
+  border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{font:inherit;color:var(--ink);border:1px solid var(--line);
+  background:var(--panel);padding:8px 14px;border-radius:8px;cursor:pointer}
+button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+button.small{font-size:.82rem;padding:5px 10px}
+
+/* 弾種情報 */
+.info-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;
+  font-size:.85rem;margin-top:10px}
+.info-grid .lbl{color:var(--sub)}
+.info-grid .val{font-variant-numeric:tabular-nums;font-weight:500}
+
+/* 砂厚表示 */
+.thick-row{display:flex;gap:10px;margin:10px 0}
+.thick-box{flex:1;background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:10px;text-align:center}
+.thick-num{font-size:1.8rem;font-weight:700;color:var(--acc);
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.thick-unit{font-size:.75rem;color:var(--sub);margin-top:2px}
+
+/* 入力行 */
+.irow{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.irow label{min-width:60px;margin:0;flex-shrink:0}
+.irow input{flex:1}
+.irow .unit{font-size:.85rem;color:var(--sub);white-space:nowrap;flex-shrink:0}
+
+/* プリセットボタン */
+.preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+
+/* 土嚢サイズ情報 */
+.sb-info{font-size:.8rem;color:var(--sub);background:var(--bg);
+  border-radius:6px;padding:8px 10px;margin-top:4px;line-height:1.5}
+
+/* 結果 */
+.res-grid{display:grid;gap:8px;margin-bottom:10px}
+.res-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:9px 0;border-top:1px solid var(--line);gap:12px}
+.res-row:first-child{border-top:0;padding-top:0}
+.res-row .rnm{font-size:.88rem;color:var(--sub)}
+.res-row .rval{font-size:1.5rem;font-weight:700;color:var(--acc);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.res-row .rval small{font-size:.85rem;color:var(--sub);font-weight:400}
+.res-total .rval{font-size:2rem;color:var(--ink)}
+
+/* 注意 */
+.warn{background:var(--warn-bg);color:var(--warn-ink);
+  border:1px solid var(--warn-line);border-radius:8px;
+  padding:10px 12px;font-size:.83rem;line-height:1.5}
+.src{font-size:.75rem;color:var(--sub);margin-top:8px}
+
+/* ボトムナビ */
+.bnav{position:fixed;bottom:0;left:0;right:0;will-change:transform;transform:translateZ(0);background:var(--panel);
+  border-top:1px solid var(--line);display:flex;z-index:100;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:8px 4px 6px;text-decoration:none;color:var(--sub);
+  font-size:.68rem;gap:3px;border:none;background:none;cursor:pointer}
+.bnav-item.active{color:var(--acc)}
+.bnav-icon{font-size:1.3rem;line-height:1}
+[hidden]{display:none!important}
+.reftbl{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:4px}
+.reftbl th{color:var(--sub);font-weight:600;text-align:right;padding:3px 6px 5px;border-bottom:1px solid var(--line);white-space:nowrap}
+.reftbl th:first-child{text-align:left}
+.reftbl td{padding:4px 6px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.reftbl td:first-child{text-align:left}
+details summary::-webkit-details-marker{color:var(--acc)}
+</style>
+</head>
+<body>
+
+<main>
+  <h1>土嚢計算ツール（簡易モード）</h1>
+  <p class="lead">弾種を選択して、バリケードに必要な土嚢数を見積もります。</p>
+
+  <!-- ① 弾種選択 -->
+  <section>
+    <h2>1. 弾種を選択</h2>
+    <label for="munSel">弾種</label>
+    <select id="munSel">
+      <option value="">── 選択してください ──</option>
+      <option value="0">20mm M56A4</option>
+      <option value="1">37mm MKII</option>
+      <option value="2">MK II 手榴弾</option>
+      <option value="3">40mm MK2 手榴弾</option>
+      <option value="4">60mm M49A3</option>
+      <option value="5">75mm M48</option>
+      <option value="6">81mm M374</option>
+      <option value="7">105mm M1</option>
+      <option value="8">155mm M107</option>
+      <option value="9">4.2in M3A1</option>
+      <option value="10">3in Stokes</option>
+    </select>
+    <div id="munInfo" class="info-grid" hidden></div>
+  </section>
+
+  <!-- ② 必要砂厚 -->
+  <section id="secThick" hidden>
+    <h2>2. 必要砂厚 <span style="font-size:.78rem;font-weight:400;color:var(--sub)">（ADA513837 Table 3 砂・貫通防止最小値）</span></h2>
+    <div class="thick-row">
+      <div class="thick-box">
+        <div class="thick-num" id="tInch">—</div>
+        <div class="thick-unit">inch</div>
+      </div>
+      <div class="thick-box">
+        <div class="thick-num" id="tCm">—</div>
+        <div class="thick-unit">cm</div>
+      </div>
+      <div class="thick-box">
+        <div class="thick-num" id="tLayers">—</div>
+        <div class="thick-unit">必要層数</div>
+      </div>
+    </div>
+    <p class="src">出典: ADA513837 Table 3 — 軟鋼製破片・直角入射（最悪条件）</p>
+  </section>
+
+  <!-- ③ バリケード設定 -->
+  <section id="secBarricade" hidden>
+    <h2>3. バリケード寸法</h2>
+
+    <p style="font-size:.82rem;color:var(--sub);margin:0 0 8px">
+      ADA513837標準バリケード(内寸: 6ft×6ft×高さ4ft 3in)を使う場合は下のボタンで自動入力できます。
+    </p>
+    <div class="preset-row">
+      <button class="small" type="button" id="presetStd">ADA標準 (6ft×4ft3in)</button>
+      <button class="small" type="button" id="presetPlate">板バリケード (4ft×10ft)</button>
+    </div>
+
+    <div class="irow">
+      <label>幅</label>
+      <input type="number" id="inWidth" min="0" step="0.01" placeholder="例: 1.83">
+      <span class="unit">m</span>
+    </div>
+    <div class="irow">
+      <label>高さ</label>
+      <input type="number" id="inHeight" min="0" step="0.01" placeholder="例: 1.30">
+      <span class="unit">m</span>
+    </div>
+
+    <label for="selFaces" style="margin-top:8px">カバー面数</label>
+    <select id="selFaces">
+      <option value="1">前面のみ（1面）</option>
+      <option value="3">前面＋両側面（3面）</option>
+      <option value="5">四面＋屋根（5面・全囲い）</option>
+    </select>
+
+    <div class="sb-info" style="margin-top:12px">
+      <strong>土嚢サイズ（参考値）</strong><br>
+      充填時: 幅 14" (35.6cm) × 長さ 26" (66cm) × 厚さ 4" (10cm)<br>
+      ※1層4inch(10cm)として計算。実際の充填量・土質により変動します。
+    </div>
+  </section>
+
+  <!-- ④ 結果 -->
+  <section id="secResult" hidden>
+    <h2>4. 必要土嚢数（目安）</h2>
+    <div class="res-grid" id="resGrid"></div>
+    <div class="warn" style="margin-top:8px">
+      ⚠ この計算は弾体の標準炸薬量に基づく値です。EOD処理でC4等の追加炸薬を用いる場合、破片速度が増加するため実際の必要厚さはこれを上回る可能性があります。必ず専門家の判断と併用してください。
+    </div>
+    <p class="src">計算根拠: ADA513837 (米陸軍工兵隊, 1996) / TM 5-1300 / DOE/TIC-11268</p>
+  </section>
+
+  <!-- ⑤ 参照テーブルと出典 -->
+  <section>
+    <h2>参照データ・出典・注意事項</h2>
+
+    <details style="margin-bottom:12px">
+      <summary style="cursor:pointer;color:var(--acc);font-size:.88rem;padding:4px 0">Table 1: 弾種データ ▾</summary>
+      <p style="font-size:.78rem;color:var(--sub);margin:6px 0 8px">出典: ADA513837 Table 1 — 破片は軟鋼製・設計上最大寸法を想定</p>
+      <div style="overflow-x:auto">
+        <table class="reftbl">
+          <thead><tr><th>弾種</th><th>炸薬</th><th>炸薬量(lb)</th><th>破片重量(lb)</th><th>初速(ft/s)</th><th>最大飛散(ft)</th><th>危険距離(ft)</th></tr></thead>
+          <tbody id="refT1"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <details style="margin-bottom:12px">
+      <summary style="cursor:pointer;color:var(--acc);font-size:.88rem;padding:4px 0">Table 3: 材料別・必要厚さ（貫通防止） ▾</summary>
+      <p style="font-size:.78rem;color:var(--sub);margin:6px 0 8px">出典: ADA513837 Table 3 — 直角入射・貫通を防ぐ最小厚さ(inch)</p>
+      <div style="overflow-x:auto">
+        <table class="reftbl">
+          <thead><tr><th>弾種</th><th>砂(in)</th><th>砂(cm)</th><th>コンクリート<br>貫通防止(in)</th><th>コンクリート<br>スポール防止(in)</th><th>木材(in)</th></tr></thead>
+          <tbody id="refT3"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <div style="font-size:.82rem;color:var(--sub);line-height:1.7">
+      <strong style="color:var(--ink);display:block;margin-bottom:6px">出典</strong>
+      ADA513837 "OE Barricade Guide Development", U.S. Army Engineering and Support Center, Huntsville, 1996.<br>
+      計算根拠: TM 5-1300 (Structures to Resist the Effects of Accidental Explosions) ／ DOE/TIC-11268 (A Manual for the Prediction of Blast and Fragment Loadings on Structures)
+    </div>
+
+    <div class="warn" style="margin-top:12px;font-size:.82rem">
+      <strong>表の読み方・注意事項</strong><br>
+      ・<strong>危険距離(58ft·lb)</strong>: DoD基準で人体に致命的とされる58ft·lb(79J)以上の運動エネルギーを持つ破片が飛来しなくなる距離<br>
+      ・<strong>砂の必要厚さ</strong>: 破片が砂を完全に貫通しなくなる最小厚さ。土嚢1個の有効厚さは約4inch(10cm)として計算<br>
+      ・<strong>コンクリート・貫通防止</strong>: 破片がコンクリートを貫通しない厚さ<br>
+      ・<strong>コンクリート・スポール防止</strong>: 貫通はしないが裏面から二次破片が剥離(スポール)することも防ぐ厚さ<br>
+      ・<strong>木材</strong>: 貫通を防ぐ最小厚さ。木材は他素材より必要厚さが大きい<br>
+      ・表の値は弾体が標準炸薬量のみで爆轟した場合。C4等の追加炸薬を使用するEOD処理では破片速度が増加し、必要厚さがこれを上回る可能性がある<br>
+      ・爆風圧・熱・有毒ガスは考慮していない
+    </div>
+  </section>
+
+</main>
+
+<!-- ボトムナビ -->
+<nav class="bnav" aria-label="メインナビゲーション">
+  <a class="bnav-item" href="./index.html"><span class="bnav-icon">📏</span><span>計算</span></a>
+  <a class="bnav-item active" href="./sandbag.html" aria-current="page"><span class="bnav-icon">🪣</span><span>土嚢</span></a>
+  <a class="bnav-item" href="./convert.html"><span class="bnav-icon">🔄</span><span>変換</span></a>
+</nav>
+
+<script>
+// ── 弾種データ (ADA513837 Tables 1-3) ──────────────────
+// sandIn: 砂の最小必要厚(in) / concP: コンクリート貫通防止(in) / concS: コンクリートスポール防止(in) / wood: 木材貫通防止(in)
+const MUNITIONS = [
+  { name:'20mm M56A4',      exp:'H761 (RDX)', expLb:0.0264,  fragLb:0.000106, vel:3183, maxFt:191,  safeFt:null, sandIn:0.83, concP:0.30, concS:0.37, wood:0.57  },
+  { name:'37mm MKII',       exp:'TNT',         expLb:0.53,    fragLb:0.026868, vel:2060, maxFt:880,  safeFt:403,  sandIn:4.64, concP:3.19, concS:3.68, wood:8.60  },
+  { name:'MK II 手榴弾',    exp:'TNT',         expLb:0.125,   fragLb:0.014217, vel:3425, maxFt:842,  safeFt:341,  sandIn:4.42, concP:2.08, concS:2.54, wood:9.39  },
+  { name:'40mm MK2 手榴弾', exp:'TNT',         expLb:0.187,   fragLb:0.013709, vel:2898, maxFt:798,  safeFt:309,  sandIn:4.01, concP:1.77, concS:2.17, wood:8.59  },
+  { name:'60mm M49A3',      exp:'Comp B',      expLb:0.42,    fragLb:0.006211, vel:5114, maxFt:723,  safeFt:243,  sandIn:4.01, concP:2.40, concS:2.81, wood:6.92  },
+  { name:'75mm M48',        exp:'TNT',         expLb:1.47,    fragLb:0.053392, vel:2692, maxFt:1166, safeFt:695,  sandIn:6.13, concP:3.11, concS:3.76, wood:18.01 },
+  { name:'81mm M374',       exp:'Comp B',      expLb:2.10,    fragLb:0.005055, vel:6721, maxFt:716,  safeFt:246,  sandIn:4.17, concP:3.23, concS:3.68, wood:6.89  },
+  { name:'105mm M1',        exp:'Comp B',      expLb:5.08,    fragLb:0.043224, vel:4055, maxFt:1224, safeFt:719,  sandIn:6.93, concP:4.11, concS:4.79, wood:18.91 },
+  { name:'155mm M107',      exp:'Comp B',      expLb:15.40,   fragLb:0.15413,  vel:3426, maxFt:1699, safeFt:1372, sandIn:9.77, concP:5.86, concS:6.82, wood:36.27 },
+  { name:'4.2in M3A1',      exp:'TNT',         expLb:8.165,   fragLb:0.013086, vel:6391, maxFt:944,  safeFt:428,  sandIn:5.62, concP:4.46, concS:5.09, wood:11.58 },
+  { name:'3in Stokes',      exp:'TNT',         expLb:2.10,    fragLb:0.006829, vel:6189, maxFt:772,  safeFt:284,  sandIn:4.47, concP:3.25, concS:3.73, wood:7.90  },
 ];
 
-// インストール時にファイルをキャッシュ
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(FILES))
-  );
-  self.skipWaiting();
+// 土嚢1枚のサイズ (m)
+const SB = { w: 0.660, h: 0.356, thick: 0.1016 }; // 26"×14"×4"
+
+const $  = id => document.getElementById(id);
+const ft2m = ft => ft * 0.3048;
+const in2cm = i => +(i * 2.54).toFixed(1);
+const lb2g  = lb => +(lb * 453.592).toFixed(2);
+
+// ── 参照テーブル生成 ─────────────────────────────────
+MUNITIONS.forEach(m => {
+  const r1 = document.createElement('tr');
+  r1.innerHTML = `<td>${m.name}</td><td>${m.exp}</td><td>${m.expLb}</td><td>${m.fragLb}</td>`+
+    `<td>${m.vel.toLocaleString()}</td><td>${m.maxFt.toLocaleString()}</td><td>${m.safeFt||'—'}</td>`;
+  document.getElementById('refT1').appendChild(r1);
+
+  const r3 = document.createElement('tr');
+  r3.innerHTML = `<td>${m.name}</td><td>${m.sandIn}</td><td>${(m.sandIn*2.54).toFixed(1)}</td>`+
+    `<td>${m.concP}</td><td>${m.concS}</td><td>${m.wood}</td>`;
+  document.getElementById('refT3').appendChild(r3);
 });
 
-// 古いキャッシュを削除
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+// ── 弾種選択イベント ──────────────────────────────────
+$('munSel').addEventListener('change', () => {
+  const idx = $('munSel').value;
+  if (idx === '') {
+    $('munInfo').hidden = true;
+    $('secThick').hidden = true;
+    $('secBarricade').hidden = true;
+    $('secResult').hidden = true;
+    return;
+  }
+  const m = MUNITIONS[Number(idx)];
+
+  // 弾種情報
+  $('munInfo').hidden = false;
+  $('munInfo').innerHTML = `
+    <span class="lbl">炸薬種類</span><span class="val">${m.exp}</span>
+    <span class="lbl">炸薬量</span><span class="val">${m.expLb} lb (${+(m.expLb*453.592).toFixed(1)} g)</span>
+    <span class="lbl">設計破片重量</span><span class="val">${m.fragLb} lb (${lb2g(m.fragLb)} g)</span>
+    <span class="lbl">破片初速</span><span class="val">${m.vel.toLocaleString()} ft/s (${+(m.vel*0.3048).toFixed(0)} m/s)</span>
+    <span class="lbl">最大飛散距離</span><span class="val">${m.maxFt.toLocaleString()} ft (${+(ft2m(m.maxFt)).toFixed(0)} m)</span>
+    <span class="lbl">危険距離 (58ft·lb)</span><span class="val">${m.safeFt ? m.safeFt+' ft ('+Math.round(ft2m(m.safeFt))+' m)' : '—'}</span>
+  `;
+
+  // 砂厚
+  const layers = Math.ceil(m.sandIn / 4);
+  $('tInch').textContent   = m.sandIn;
+  $('tCm').textContent     = in2cm(m.sandIn);
+  $('tLayers').textContent = layers;
+  $('secThick').hidden     = false;
+  $('secBarricade').hidden = false;
+
+  calc();
 });
 
-// キャッシュ優先で応答（オフライン対応）
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
-  );
+// ── 寸法・面数イベント ────────────────────────────────
+['inWidth','inHeight','selFaces'].forEach(id => {
+  $(id).addEventListener('input', calc);
+  $(id).addEventListener('change', calc);
 });
+
+// ── プリセット ────────────────────────────────────────
+$('presetStd').addEventListener('click', () => {
+  $('inWidth').value  = (6 * 0.3048).toFixed(2);   // 6ft = 1.83m
+  $('inHeight').value = (4.25 * 0.3048).toFixed(2); // 4ft3in = 1.30m
+  calc();
+});
+$('presetPlate').addEventListener('click', () => {
+  $('inWidth').value  = (4 * 0.3048).toFixed(2);    // 4ft = 1.22m
+  $('inHeight').value = (10 * 0.3048).toFixed(2);   // 10ft = 3.05m
+  calc();
+});
+
+// ── 計算 ──────────────────────────────────────────────
+function calc() {
+  const idx = $('munSel').value;
+  if (idx === '') return;
+  const m      = MUNITIONS[Number(idx)];
+  const w      = parseFloat($('inWidth').value);
+  const h      = parseFloat($('inHeight').value);
+  const faces  = Number($('selFaces').value) || 1;
+
+  if (!(w > 0) || !(h > 0)) {
+    $('secResult').hidden = true;
+    return;
+  }
+
+  const layers    = Math.ceil(m.sandIn / 4);           // 4inch/層
+  const perRowH   = Math.ceil(w / SB.w);               // 横方向の枚数
+  const perColH   = Math.ceil(h / SB.h);               // 縦方向の枚数
+  const perLayer  = perRowH * perColH;                  // 1層1面あたり
+  const perFace   = layers * perLayer;                  // 1面あたり合計
+  const total     = perFace * faces;                    // 全面合計
+
+  const faceLabels = {1:'前面1面',3:'3面',5:'5面(全囲い)'};
+
+  $('resGrid').innerHTML = `
+    <div class="res-row">
+      <span class="rnm">必要層数</span>
+      <span class="rval">${layers} <small>層 (${m.sandIn}" ÷ 4"/層)</small></span>
+    </div>
+    <div class="res-row">
+      <span class="rnm">1層・1面あたり<br><small style="font-size:.75rem">(横${perRowH}枚 × 縦${perColH}枚)</small></span>
+      <span class="rval">${perLayer} <small>枚</small></span>
+    </div>
+    <div class="res-row">
+      <span class="rnm">1面あたり合計</span>
+      <span class="rval">${perFace} <small>枚</small></span>
+    </div>
+    <div class="res-row res-total">
+      <span class="rnm">総合計 (${faceLabels[faces] || faces+'面'})</span>
+      <span class="rval">${total.toLocaleString('ja-JP')} <small>枚</small></span>
+    </div>
+  `;
+  $('secResult').hidden = false;
+}
+</script>
+</body>
+</html>
