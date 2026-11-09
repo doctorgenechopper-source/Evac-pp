@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>土嚢計算 - 避難距離ツール</title>
+<title>EOD Tools — 土嚢計算</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#0e6a6a">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EOD Tools">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <style>
 :root{
@@ -30,6 +31,8 @@ main{max-width:640px;margin:0 auto;
   padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 72px + 16px)}
 h1{font-size:1.2rem;margin:8px 0 4px}
 h2{font-size:1rem;margin:0 0 10px;color:var(--ink)}
+.disclaimer{background:#fff3cd;border:1px solid #e8c880;border-radius:8px;padding:10px 12px;font-size:.82rem;color:#5a4000;margin-bottom:12px;line-height:1.5}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .disclaimer{background:#3a2d10;color:#f2d58f;border-color:#6b5420}}
 .lead{color:var(--sub);font-size:.85rem;margin:0 0 14px}
 
 section{background:var(--panel);border:1px solid var(--line);
@@ -109,7 +112,7 @@ details summary::-webkit-details-marker{color:var(--acc)}
 <body>
 
 <main>
-  <h1>土嚢計算ツール（簡易モード）</h1>
+  <h1>EOD Tools — 土嚢計算</h1>
   <p class="lead">弾種を選択して、バリケードに必要な土嚢数を見積もります。</p>
 
   <!-- ① 弾種選択 -->
@@ -248,8 +251,8 @@ details summary::-webkit-details-marker{color:var(--acc)}
 
 <!-- ボトムナビ -->
 <nav class="bnav" aria-label="メインナビゲーション">
-  <a class="bnav-item" href="./index.html"><span class="bnav-icon">📏</span><span>計算</span></a>
-  <a class="bnav-item active" href="./sandbag.html" aria-current="page"><span class="bnav-icon">🪣</span><span>土嚢</span></a>
+  <a class="bnav-item" href="./index.html"><span class="bnav-icon">🚨</span><span>計算</span></a>
+  <a class="bnav-item active" href="./sandbag.html" aria-current="page"><span class="bnav-icon">🪏</span><span>土嚢</span></a>
   <a class="bnav-item" href="./convert.html"><span class="bnav-icon">🔄</span><span>変換</span></a>
 </nav>
 

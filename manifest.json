@@ -1,7 +1,7 @@
 {
-  "name": "避難距離計算ツール",
-  "short_name": "避難距離",
-  "description": "爆薬のTNT換算とリューデンベルグ式による避難距離計算",
+  "name": "EOD Tools",
+  "short_name": "EOD Tools",
+  "description": "爆薬の退避距離・破片飛散距離・土嚢計算・単位変換",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

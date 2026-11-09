@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>避難距離計算ツール</title>
+<title>EOD Tools</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#0e6a6a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="避難距離">
+<meta name="apple-mobile-web-app-title" content="EOD Tools">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <style>
 :root{
@@ -51,6 +51,8 @@ main{max-width:640px;margin:0 auto;padding:16px 16px calc(env(safe-area-inset-bo
 .bnav-icon{font-size:1.3rem;line-height:1}
 h1{font-size:1.25rem;margin:8px 0 4px}
 h2{font-size:1.05rem;margin:0 0 10px}
+.disclaimer{background:#fff3cd;border:1px solid #e8c880;border-radius:8px;padding:10px 12px;font-size:.82rem;color:#5a4000;margin-bottom:12px;line-height:1.5}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .disclaimer{background:#3a2d10;color:#f2d58f;border-color:#6b5420}}
 .lead{color:var(--sub);font-size:.88rem;margin:0 0 12px}
 section{background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;margin-bottom:14px}
@@ -171,8 +173,11 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
 </div>
 
 <main>
-  <h1>避難距離計算ツール</h1>
-  <p class="lead">爆薬の質量をTNT換算し、リューデンベルグの式でK値ごとの距離を求めます。</p>
+  <h1>EOD Tools — 退避距離計算</h1>
+  <div class="disclaimer">
+    ⚠ このツールの計算結果はすべて<strong>参考値</strong>です。実際の作業・避難・安全判断には必ず専門家の指示と公的基準に従ってください。
+  </div>
+  <p class="lead">爆薬の質量をTNT換算し、リューデンベルグの式でK値ごとの退避距離を求めます。</p>
 
   <section>
     <h2>1. 入力</h2>
@@ -200,8 +205,9 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
   </section>
 
   <section>
-    <h2>3. 破片飛散距離（未実装）</h2>
-    <div class="warn">HFDR・MFDRの式は出典確認待ちのため未実装です。文献確認でき次第追加します。</div>
+    <h2>3. 破片飛散距離（参考値）</h2>
+    <div id="frag-out"><div class="empty">爆薬と数量を入力すると距離が表示されます。</div></div>
+    <div class="warn" style="margin-top:10px;font-size:.82rem">⚠ 出典未確認の実務経験則です。参考値としてのみご利用ください。</div>
   </section>
 
   <section>
@@ -224,9 +230,17 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
       W<sub>TNT</sub> = Σ(質量kg × RE係数) ／
       W<sub>lb</sub> = W<sub>TNT</sub> ÷ 0.45359237 ／
       D = K × W<sub>lb</sub><sup>1/3</sup> (m、切り上げ)<br>
-      K=16: 米軍K50 ft/lb<sup>1/3</sup>(IBD相当) ／
-      K=61: 米軍K197(実務値・区分名未確認) ／
-      K=100: 米軍K328(窓ガラス破損確率)
+      K=16: 米軍K50 ft/lb<sup>1/3</sup> (Essential personnel) ／
+      K=61: 米軍K197 ft/lb<sup>1/3</sup> (Structural damage) ／
+      K=100: 米軍K328 ft/lb<sup>1/3</sup> (Non-essential personnel)
+    </p>
+    <p style="font-size:.85rem;color:var(--sub);margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)">
+      <strong style="color:var(--ink)">破片飛散距離の計算式</strong><br>
+      HFDR(ft) = 313 × W<sub>lb</sub><sup>0.206</sup> → ×0.3048 → m<br>
+      MFDR(ft) = 3337 × W<sub>lb</sub><sup>0.188</sup> → ×0.3048 → m<br>
+      W<sub>lb</sub> = W<sub>TNT</sub>(kg) ÷ 0.45359237<br><br>
+      <strong style="color:var(--ink)">式の根拠と注意</strong><br>
+      一次文献の出典は未確認。米軍クイックカードの実測値13点（1〜1000 lb）に対して最小二乗法（べき乗モデル）を適用して逆算した近似式。誤差は最大1.7%。結果は切り上げ表示としており、カード値以上（安全側）になるよう調整済み。
     </p>
     <div class="warn">爆風のみ対象。破片・地形・遮蔽物・防護壁は考慮しません。結果は目安です。</div>
   </section>
@@ -235,11 +249,11 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
 <!-- ボトムナビ：将来の機能追加はここに <a class="bnav-item" href="xxx.html"> を追加 -->
 <nav class="bnav" aria-label="メインナビゲーション">
   <a class="bnav-item active" href="./index.html" aria-current="page">
-    <span class="bnav-icon" aria-hidden="true">📏</span>
+    <span class="bnav-icon" aria-hidden="true">🚨</span>
     <span>計算</span>
   </a>
   <a class="bnav-item" href="./sandbag.html">
-    <span class="bnav-icon" aria-hidden="true">🪣</span>
+    <span class="bnav-icon" aria-hidden="true">🪏</span>
     <span>土嚢</span>
   </a>
   <a class="bnav-item" href="./convert.html">
@@ -263,9 +277,9 @@ const $ = id => document.getElementById(id);
 const CFG = {
   LB: 0.45359237,
   KS: [
-    { label:'小 (IBD相当)',            k:16,  note:'米軍K50・区分名要確認' },
-    { label:'中 (実務値)',              k:61,  note:'米軍K197・区分名未確認' },
-    { label:'大 (窓ガラス破損確率)',     k:100, note:'米軍K328' }
+    { label:'Essential personnel',     k:16,  note:'米軍K50' },
+    { label:'Structural damage',       k:61,  note:'米軍K197' },
+    { label:'Non-essential personnel', k:100, note:'米軍K328' }
   ]
 };
 
@@ -382,6 +396,20 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 ═══════════════════════════════════ */
 const mkItem=()=>({name:'',coef:'',wikiCoef:null,qty:'',unit:'kg'});
 const findEx=n=>EX.find(e=>e.n===n)||null;
+
+// ── localStorage（ページ遷移後もデータを保持） ───────
+const LS_KEY='evac-items-v1';
+function saveState(){
+  try{ localStorage.setItem(LS_KEY,JSON.stringify({items,multi:$('cb-multi').checked})); }catch(e){}
+}
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(LS_KEY)||'null');
+    if(s&&Array.isArray(s.items)&&s.items.length) items=s.items;
+    if(s&&s.multi) $('cb-multi').checked=true;
+  }catch(e){}
+}
+
 let items=[mkItem()];
 
 function renderItems(){
@@ -509,6 +537,30 @@ function calc(){
   });
   out.appendChild(wrap);
   meta.textContent=parts.join('\n')+'\n合計 W_TNT = '+wTnt.toPrecision(4)+' kg ('+wLb.toPrecision(4)+' lb)';
+
+  // HFDR / MFDR（クイックカード13点から最小二乗法で逆算）
+  const hfdrFt=313*Math.pow(wLb,0.206);
+  const mfdrFt=3337*Math.pow(wLb,0.188);
+  const hfdrM=Math.ceil(hfdrFt*0.3048);
+  const mfdrM=Math.ceil(mfdrFt*0.3048);
+  const fragOut=$('frag-out'); fragOut.replaceChildren();
+  const fragWrap=document.createElement('div'); fragWrap.className='res';
+  [
+    {label:'HFDR',sub:'危険破片距離 (Hazardous Fragment Distance Range)',val:hfdrM,ft:Math.ceil(hfdrFt)},
+    {label:'MFDR',sub:'最大破片距離 (Maximum Fragment Distance Range)',  val:mfdrM,ft:Math.ceil(mfdrFt)}
+  ].forEach(item=>{
+    const row=document.createElement('div'); row.className='resrow';
+    const left=document.createElement('div'); left.className='nm'; left.textContent=item.label;
+    const nt=document.createElement('span'); nt.className='nt';
+    nt.textContent=item.sub+' / '+item.ft.toLocaleString('ja-JP')+' ft';
+    left.appendChild(nt);
+    const right=document.createElement('div'); right.className='dist';
+    right.textContent=item.val.toLocaleString('ja-JP');
+    const u=document.createElement('small'); u.textContent=' m'; right.appendChild(u);
+    row.append(left,right); fragWrap.appendChild(row);
+  });
+  fragOut.appendChild(fragWrap);
+  saveState();
 }
 
 $('cb-multi').addEventListener('change', calc);
@@ -520,10 +572,11 @@ $('addItem').addEventListener('click',()=>{
 });
 $('resetAll').addEventListener('click',()=>{
   if(items.some(it=>it.name||it.qty)&&!confirm('入力をすべてリセットしますか？')) return;
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
   items=[mkItem()]; renderItems(); calc();
 });
 
-renderItems(); calc();
+loadState(); renderItems(); calc();
 </script>
 </body>
 </html>

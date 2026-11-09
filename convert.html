@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>単位変換 - 避難距離ツール</title>
+<title>EOD Tools — 単位変換</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#0e6a6a">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="避難距離">
+<meta name="apple-mobile-web-app-title" content="EOD Tools">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <style>
 :root{
@@ -73,7 +73,10 @@ h1{font-size:1.2rem;margin:8px 0 14px}
 <body>
 
 <main>
-  <h1>単位変換</h1>
+  <h1>EOD Tools — 単位変換</h1>
+  <div class="disclaimer">
+    ⚠ このツールの計算結果はすべて<strong>参考値</strong>です。実際の作業・避難・安全判断には必ず専門家の指示と公的基準に従ってください。
+  </div>
   <div class="tabs" id="tabs" role="tablist"></div>
   <div id="cards"></div>
   <button class="clear-btn" id="clearBtn" type="button">全てクリア</button>
@@ -82,11 +85,11 @@ h1{font-size:1.2rem;margin:8px 0 14px}
 <!-- ボトムナビ -->
 <nav class="bnav" aria-label="メインナビゲーション">
   <a class="bnav-item" href="./index.html">
-    <span class="bnav-icon" aria-hidden="true">📏</span>
+    <span class="bnav-icon" aria-hidden="true">🚨</span>
     <span>計算</span>
   </a>
   <a class="bnav-item" href="./sandbag.html">
-    <span class="bnav-icon" aria-hidden="true">🪣</span>
+    <span class="bnav-icon" aria-hidden="true">🪏</span>
     <span>土嚢</span>
   </a>
   <a class="bnav-item active" href="./convert.html" aria-current="page">
