@@ -88,6 +88,20 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
   white-space:nowrap;
 }
 
+/* 設定モーダル */
+#set-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:600;display:none;align-items:flex-end}
+#set-overlay.open{display:flex}
+#set-sheet{background:var(--panel);border-radius:16px 16px 0 0;width:100%;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+#set-sheet h3{margin:0 0 14px;font-size:1rem}
+#set-sheet select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:12px}
+#set-sheet select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#set-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+#set-header span{font-weight:600;font-size:1rem}
+#set-sheet button{padding:8px 14px;border-radius:8px;font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+#set-sheet button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.set-row{display:flex;gap:8px}
+.set-saved{font-size:.82rem;color:var(--acc);min-height:1.3em;margin-top:4px}
+
 /* ドラッグ可能マーカーのカーソル */
 .leaflet-marker-draggable{cursor:grab}
 .leaflet-marker-draggable:active{cursor:grabbing}
@@ -113,8 +127,25 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 
 <div id="map"></div>
 
+<!-- 設定モーダル -->
+<div id="set-overlay">
+  <div id="set-sheet">
+    <div id="set-header">
+      <span>⚙ 初期表示エリア</span>
+      <button type="button" id="set-close">✕ 閉じる</button>
+    </div>
+    <label style="font-size:.85rem;color:var(--sub);display:block;margin-bottom:6px">都道府県を選択してください</label>
+    <select id="pref-sel"></select>
+    <div class="set-row">
+      <button type="button" id="set-save" class="primary">保存</button>
+    </div>
+    <p class="set-saved" id="set-saved"></p>
+  </div>
+</div>
+
 <div id="controls">
   <button id="gps-btn">📍 現在地</button>
+  <button id="set-btn">⚙ エリア設定</button>
   <button id="clear-btn" hidden>🗑 クリア</button>
 </div>
 
@@ -134,6 +165,62 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+
+// ── 都道府県データ ────────────────────────────
+const PREFS = [
+  {n:'北海道',lat:43.0642,lng:141.3469},{n:'青森',lat:40.8244,lng:140.7400},
+  {n:'岩手',lat:39.7036,lng:141.1527},{n:'宮城',lat:38.2688,lng:140.8721},
+  {n:'秋田',lat:39.7186,lng:140.1023},{n:'山形',lat:38.2404,lng:140.3634},
+  {n:'福島',lat:37.7503,lng:140.4676},{n:'茨城',lat:36.3418,lng:140.4468},
+  {n:'栃木',lat:36.5658,lng:139.8836},{n:'群馬',lat:36.3912,lng:139.0608},
+  {n:'埼玉',lat:35.8569,lng:139.6489},{n:'千葉',lat:35.6047,lng:140.1233},
+  {n:'東京',lat:35.6762,lng:139.6503},{n:'神奈川',lat:35.4478,lng:139.6425},
+  {n:'新潟',lat:37.9026,lng:139.0232},{n:'富山',lat:36.6953,lng:137.2113},
+  {n:'石川',lat:36.5947,lng:136.6256},{n:'福井',lat:36.0652,lng:136.2219},
+  {n:'山梨',lat:35.6635,lng:138.5684},{n:'長野',lat:36.6513,lng:138.1811},
+  {n:'岐阜',lat:35.3912,lng:136.7223},{n:'静岡',lat:34.9769,lng:138.3831},
+  {n:'愛知',lat:35.1802,lng:136.9066},{n:'三重',lat:34.7303,lng:136.5086},
+  {n:'滋賀',lat:35.0045,lng:135.8686},{n:'京都',lat:35.0116,lng:135.7681},
+  {n:'大阪',lat:34.6937,lng:135.5023},{n:'兵庫',lat:34.6913,lng:135.1830},
+  {n:'奈良',lat:34.6851,lng:135.8325},{n:'和歌山',lat:34.2260,lng:135.1675},
+  {n:'鳥取',lat:35.5011,lng:134.2351},{n:'島根',lat:35.4723,lng:133.0505},
+  {n:'岡山',lat:34.6618,lng:133.9344},{n:'広島',lat:34.3966,lng:132.4596},
+  {n:'山口',lat:34.1860,lng:131.4705},{n:'徳島',lat:34.0658,lng:134.5593},
+  {n:'香川',lat:34.3401,lng:134.0434},{n:'愛媛',lat:33.8417,lng:132.7657},
+  {n:'高知',lat:33.5597,lng:133.5311},{n:'福岡',lat:33.6064,lng:130.4181},
+  {n:'佐賀',lat:33.2494,lng:130.2988},{n:'長崎',lat:32.7448,lng:129.8737},
+  {n:'熊本',lat:32.7898,lng:130.7417},{n:'大分',lat:33.2382,lng:131.6126},
+  {n:'宮崎',lat:31.9110,lng:131.4237},{n:'鹿児島',lat:31.5602,lng:130.5581},
+  {n:'沖縄',lat:26.2124,lng:127.6809},
+];
+
+const HOME_KEY = 'eod-map-home';
+
+// セレクトを生成
+PREFS.forEach((p,i)=>{
+  const o=document.createElement('option');
+  o.value=i; o.textContent=p.n; $('pref-sel').appendChild(o);
+});
+
+// 保存済みホームを読み込み
+let home = {lat:35.6762,lng:139.6503}; // デフォルト: 東京
+try{
+  const s=JSON.parse(localStorage.getItem(HOME_KEY)||'null');
+  if(s){ home=s; const idx=PREFS.findIndex(p=>p.n===s.name); if(idx>=0) $('pref-sel').value=idx; }
+}catch(e){}
+
+// 設定モーダル
+$('set-btn').addEventListener('click',()=>$('set-overlay').classList.add('open'));
+$('set-close').addEventListener('click',()=>$('set-overlay').classList.remove('open'));
+$('set-overlay').addEventListener('click',e=>{ if(e.target===$('set-overlay')) $('set-overlay').classList.remove('open'); });
+$('set-save').addEventListener('click',()=>{
+  const p=PREFS[Number($('pref-sel').value)];
+  home={lat:p.lat,lng:p.lng,name:p.n};
+  try{ localStorage.setItem(HOME_KEY,JSON.stringify(home)); }catch(e){}
+  map.setView([p.lat,p.lng],10);
+  $('set-saved').textContent='✓ 「'+p.n+'」を初期エリアに設定しました';
+  setTimeout(()=>{ $('set-saved').textContent=''; $('set-overlay').classList.remove('open'); },1500);
+});
 
 // 凡例設定（色・スタイル）
 const STYLES = [
@@ -174,8 +261,8 @@ function buildLegend(){
   el.appendChild(hint);
 }
 
-// 地図初期化（ズームコントロールは右下に配置）
-const map=L.map('map',{zoomControl:false}).setView([35.6762,139.6503],10);
+// 地図初期化（保存済みホームエリアを使用）
+const map=L.map('map',{zoomControl:false}).setView([home.lat,home.lng],10);
 L.control.zoom({position:'bottomright'}).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
   attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
