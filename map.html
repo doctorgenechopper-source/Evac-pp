@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EOD Tools — 地図</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0e6a6a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EOD Tools">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#f1f3f2;--panel:#fff;--ink:#1b2326;--sub:#5a666b;--line:#d3d9d8;
+  --acc:#0e6a6a;--acc-ink:#fff;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121719;--panel:#1b2225;--ink:#e6ecea;--sub:#9aa7aa;--line:#2e393c;
+  --acc:#4fc1b9;--acc-ink:#06201f;color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;
+  font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  color:var(--ink)}
+
+#map{
+  position:fixed;
+  top:env(safe-area-inset-top,0px);
+  left:0;right:0;
+  bottom:calc(56px + env(safe-area-inset-bottom,0px));
+}
+
+/* 操作ボタン（左上） */
+#controls{
+  position:fixed;
+  top:calc(env(safe-area-inset-top,0px) + 12px);
+  left:12px;z-index:400;
+  display:flex;flex-direction:column;gap:6px;
+}
+#controls button{
+  padding:8px 12px;border-radius:8px;font:inherit;font-size:.85rem;
+  border:1px solid rgba(0,0,0,.18);background:var(--panel);color:var(--ink);
+  cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.14);white-space:nowrap;
+}
+#controls button:disabled{opacity:.5;cursor:default}
+#controls button:active{opacity:.7}
+
+/* 凡例パネル（右上） */
+#legend-panel{
+  position:fixed;
+  top:calc(env(safe-area-inset-top,0px) + 12px);
+  right:12px;z-index:400;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.14);
+  max-width:175px;min-width:140px;font-size:.78rem;
+}
+.lgd-row{display:flex;align-items:center;gap:7px;padding:3px 0}
+.lgd-sw{width:11px;height:11px;border-radius:50%;flex-shrink:0;border:2px solid}
+.lgd-lbl{line-height:1.3;min-width:0}
+.lgd-dist{color:var(--sub);font-variant-numeric:tabular-nums;font-size:.72rem}
+.lgd-hint{font-size:.72rem;color:var(--sub);margin-top:7px;padding-top:6px;
+  border-top:1px solid var(--line);line-height:1.5}
+.lgd-updated{font-size:.7rem;color:var(--sub);margin-bottom:6px;padding-bottom:6px;
+  border-bottom:1px solid var(--line)}
+.lgd-nodata{font-size:.8rem;color:var(--sub);line-height:1.5}
+
+/* ズームコントロールをナビの上に配置 */
+.leaflet-bottom.leaflet-right{
+  bottom:calc(60px + env(safe-area-inset-bottom,0px));
+}
+
+/* 座標表示バー */
+#coords-bar{
+  position:fixed;
+  bottom:calc(60px + env(safe-area-inset-bottom,0px));
+  left:0;right:0;
+  display:flex;justify-content:center;
+  z-index:400;pointer-events:none;
+}
+#coords-text{
+  background:var(--panel);border:1px solid var(--line);
+  padding:4px 12px;border-radius:20px;
+  font-size:.75rem;color:var(--sub);
+  box-shadow:0 1px 4px rgba(0,0,0,.12);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+
+/* ドラッグ可能マーカーのカーソル */
+.leaflet-marker-draggable{cursor:grab}
+.leaflet-marker-draggable:active{cursor:grabbing}
+
+/* ボトムナビ */
+.bnav{
+  position:fixed;bottom:0;left:0;right:0;
+  will-change:transform;transform:translateZ(0);
+  background:var(--panel);border-top:1px solid var(--line);
+  display:flex;z-index:500;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.bnav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:8px 2px 6px;text-decoration:none;color:var(--sub);
+  font-size:.65rem;gap:2px;
+}
+.bnav-item.active{color:var(--acc)}
+.bnav-icon{font-size:1.25rem;line-height:1}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="controls">
+  <button id="gps-btn">📍 現在地</button>
+  <button id="clear-btn" hidden>🗑 クリア</button>
+</div>
+
+<div id="legend-panel">
+  <div id="lgd-content"></div>
+</div>
+
+<div id="coords-bar"><span id="coords-text">地図をタップして爆発点を設定</span></div>
+
+<nav class="bnav" aria-label="メインナビゲーション">
+  <a class="bnav-item" href="./index.html"><span class="bnav-icon">🚨</span><span>計算</span></a>
+  <a class="bnav-item" href="./sandbag.html"><span class="bnav-icon">🪏</span><span>土嚢</span></a>
+  <a class="bnav-item" href="./convert.html"><span class="bnav-icon">🔄</span><span>変換</span></a>
+  <a class="bnav-item active" href="./map.html" aria-current="page"><span class="bnav-icon">🗺</span><span>地図</span></a>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+// 凡例設定（色・スタイル）
+const STYLES = [
+  { color:'#16a34a', fill:0.15, dash:null  }, // Essential (K=16)
+  { color:'#d97706', fill:0.15, dash:null  }, // Structural (K=61)
+  { color:'#dc2626', fill:0.15, dash:null  }, // Non-essential (K=100)
+  { color:'#2563eb', fill:0.10, dash:'6 4' }, // HFDR
+  { color:'#7c3aed', fill:0.08, dash:'8 5' }, // MFDR
+];
+
+// locaStorageからデータ読み込み
+let mapData = null;
+try{ mapData = JSON.parse(localStorage.getItem('eod-map-data')||'null'); }catch(e){}
+
+// 凡例パネル描画
+function buildLegend(){
+  const el = $('lgd-content'); el.replaceChildren();
+  if(!mapData){
+    const d=document.createElement('div'); d.className='lgd-nodata';
+    d.textContent='計算ページで計算を実行してから開いてください。';
+    el.appendChild(d); return;
+  }
+  if(mapData.updated){
+    const u=document.createElement('div'); u.className='lgd-updated';
+    u.textContent=mapData.updated; el.appendChild(u);
+  }
+  mapData.circles.forEach((c,i)=>{
+    const st=STYLES[i]||STYLES[0];
+    const row=document.createElement('div'); row.className='lgd-row';
+    const sw=document.createElement('div'); sw.className='lgd-sw';
+    sw.style.cssText='background:'+st.color+'30;border-color:'+st.color;
+    const lbl=document.createElement('div'); lbl.className='lgd-lbl';
+    lbl.innerHTML=c.label+'<br><span class="lgd-dist">'+c.dist.toLocaleString('ja-JP')+' m</span>';
+    row.append(sw,lbl); el.appendChild(row);
+  });
+  const hint=document.createElement('div'); hint.className='lgd-hint';
+  hint.textContent='地図をタップして爆発点を設定';
+  el.appendChild(hint);
+}
+
+// 地図初期化（ズームコントロールは右下に配置）
+const map=L.map('map',{zoomControl:false}).setView([35.6762,139.6503],10);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom:19
+}).addTo(map);
+
+let marker=null, circles=[];
+
+// 座標表示の更新
+function updateCoords(ll){
+  $('coords-text').textContent=
+    '📍 '+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5);
+}
+
+// 爆発点マーカーアイコン
+const bombIcon=L.divIcon({
+  html:'<div style="font-size:28px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">💥</div>',
+  iconSize:[32,32],iconAnchor:[16,16],className:''
+});
+
+// 爆発点をセットして円を描く
+function setPoint(latlng){
+  if(marker) map.removeLayer(marker);
+  circles.forEach(c=>map.removeLayer(c)); circles=[];
+
+  // ドラッグ可能なマーカーを配置
+  marker=L.marker(latlng,{icon:bombIcon,draggable:true,zIndexOffset:1000}).addTo(map);
+
+  // ドラッグ中: 円をリアルタイムで追従
+  marker.on('drag',e=>{
+    const ll=e.latlng;
+    circles.forEach(c=>c.setLatLng(ll));
+    updateCoords(ll);
+  });
+
+  // ドラッグ終了: 座標を確定
+  marker.on('dragend',e=>{
+    updateCoords(e.target.getLatLng());
+  });
+
+  updateCoords(latlng);
+
+  if(!mapData){ $('clear-btn').hidden=false; return; }
+
+  // 大きい円から順に描画（小さい円が前面）
+  const sorted=[...mapData.circles].sort((a,b)=>b.dist-a.dist);
+  sorted.forEach(c=>{
+    const idx=mapData.circles.indexOf(c);
+    const st=STYLES[idx]||STYLES[0];
+    const circle=L.circle(latlng,{
+      radius:c.dist, color:st.color, weight:2,
+      fillColor:st.color, fillOpacity:st.fill,
+      dashArray:st.dash||undefined
+    }).addTo(map);
+    circle.bindTooltip(c.label+': '+c.dist.toLocaleString('ja-JP')+'m');
+    circles.push(circle);
+  });
+
+  // 最大円にフィット
+  const maxR=Math.max(...mapData.circles.map(c=>c.dist));
+  map.fitBounds(L.circle(latlng,{radius:maxR}).getBounds().pad(0.1));
+  $('clear-btn').hidden=false;
+}
+
+map.on('click',e=>setPoint(e.latlng));
+
+// GPS
+$('gps-btn').addEventListener('click',()=>{
+  if(!navigator.geolocation){ alert('GPSに対応していません'); return; }
+  const btn=$('gps-btn'); btn.textContent='📍 取得中…'; btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      const ll=L.latLng(pos.coords.latitude,pos.coords.longitude);
+      map.setView(ll,15); setPoint(ll);
+      btn.textContent='📍 現在地'; btn.disabled=false;
+    },
+    ()=>{
+      btn.textContent='📍 現在地'; btn.disabled=false;
+      alert('位置情報の取得に失敗しました。\nブラウザの設定でChromeに位置情報の許可を与えてください。');
+    },
+    {enableHighAccuracy:true,timeout:10000}
+  );
+});
+
+// クリア
+$('clear-btn').addEventListener('click',()=>{
+  if(marker){ map.removeLayer(marker); marker=null; }
+  circles.forEach(c=>map.removeLayer(c)); circles=[];
+  $('clear-btn').hidden=true;
+});
+
+buildLegend();
+</script>
+</body>
+</html>

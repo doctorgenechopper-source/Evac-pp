@@ -254,6 +254,7 @@ details summary::-webkit-details-marker{color:var(--acc)}
   <a class="bnav-item" href="./index.html"><span class="bnav-icon">🚨</span><span>計算</span></a>
   <a class="bnav-item active" href="./sandbag.html" aria-current="page"><span class="bnav-icon">🪏</span><span>土嚢</span></a>
   <a class="bnav-item" href="./convert.html"><span class="bnav-icon">🔄</span><span>変換</span></a>
+  <a class="bnav-item" href="./map.html"><span class="bnav-icon">🗺</span><span>地図</span></a>
 </nav>
 
 <script>
@@ -388,7 +389,33 @@ function calc() {
     </div>
   `;
   $('secResult').hidden = false;
+  sbSave();
 }
+
+// ── localStorage ──────────────────────────────
+const SB_KEY = 'eod-sandbag-v1';
+function sbSave(){
+  try{ localStorage.setItem(SB_KEY, JSON.stringify({
+    mun:   $('munSel').value,
+    w:     $('inWidth').value,
+    h:     $('inHeight').value,
+    faces: $('selFaces').value
+  })); }catch(e){}
+}
+function sbLoad(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SB_KEY)||'null');
+    if(!s) return;
+    if(s.mun   !== undefined) $('munSel').value  = s.mun;
+    if(s.w)                   $('inWidth').value  = s.w;
+    if(s.h)                   $('inHeight').value = s.h;
+    if(s.faces)               $('selFaces').value = s.faces;
+  }catch(e){}
+}
+
+// ── 初期化（保存データを復元） ────────────────
+sbLoad();
+if($('munSel').value) $('munSel').dispatchEvent(new Event('change'));
 </script>
 </body>
 </html>

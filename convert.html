@@ -96,6 +96,7 @@ h1{font-size:1.2rem;margin:8px 0 14px}
     <span class="bnav-icon" aria-hidden="true">🔄</span>
     <span>変換</span>
   </a>
+  <a class="bnav-item" href="./map.html"><span class="bnav-icon">🗺</span><span>地図</span></a>
 </nav>
 
 <script>
@@ -160,7 +161,26 @@ const CATS = [
 ];
 
 let activeCat = 0;
-let inputRefs = []; // {input, factor}[]
+let inputRefs = [];
+let cvState = { cat: 0, vals: {} };
+
+const CV_KEY = 'eod-convert-v1';
+function cvSave(srcRef){
+  try{
+    const idx = inputRefs.indexOf(srcRef);
+    if(idx < 0) return;
+    if(!cvState.vals) cvState.vals = {};
+    cvState.vals[CATS[activeCat].id] = { idx, value: srcRef.input.value };
+    cvState.cat = activeCat;
+    localStorage.setItem(CV_KEY, JSON.stringify(cvState));
+  }catch(e){}
+}
+function cvLoad(){
+  try{
+    const s = JSON.parse(localStorage.getItem(CV_KEY)||'null');
+    if(s) cvState = s;
+  }catch(e){}
+}
 
 // ── タブ生成 ────────────────────────────────
 const tabsEl  = document.getElementById('tabs');
@@ -223,6 +243,13 @@ function buildCards() {
   });
 
   cardsEl.appendChild(card);
+
+  // 保存値を復元
+  const saved = cvState.vals && cvState.vals[cat.id];
+  if(saved && inputRefs[saved.idx] && saved.value !== ''){
+    inputRefs[saved.idx].input.value = saved.value;
+    onInput(inputRefs[saved.idx]);
+  }
 }
 
 // ── 変換ロジック ────────────────────────────
@@ -236,9 +263,9 @@ function onInput(srcRef) {
   inputRefs.forEach(r => {
     if (r === srcRef) return;
     const converted = baseVal / r.factor;
-    // 有効数字6桁で表示、小さい値は指数表記を避ける
     r.input.value = +converted.toPrecision(6);
   });
+  cvSave(srcRef);
 }
 
 // ── タブ切り替え ────────────────────────────
@@ -254,10 +281,13 @@ function selectCat(i) {
 // ── クリア ───────────────────────────────────
 document.getElementById('clearBtn').addEventListener('click', () => {
   inputRefs.forEach(r => { r.input.value = ''; r.input.classList.remove('active-in'); });
+  if(cvState.vals) cvState.vals[CATS[activeCat].id] = null;
+  try{ localStorage.setItem(CV_KEY, JSON.stringify(cvState)); }catch(e){}
 });
 
-// ── 初期描画 ────────────────────────────────
-buildCards();
+// ── 初期描画（保存データを復元） ─────────────
+cvLoad();
+selectCat(cvState.cat || 0);
 </script>
 </body>
 </html>

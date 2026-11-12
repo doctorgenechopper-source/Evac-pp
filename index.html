@@ -156,9 +156,39 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
 .mitem-name{flex:1;font-size:.95rem}
 .mitem-re{font-size:.8rem;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
 .no-match{color:var(--sub);font-size:.9rem;padding:16px 0;text-align:center}
+/* ── 履歴モーダル ── */
+#hist-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:300;display:none;align-items:flex-end}
+#hist-overlay.open{display:flex}
+#hist-sheet{background:var(--panel);border-radius:16px 16px 0 0;width:100%;max-height:80vh;display:flex;flex-direction:column;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+#hist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+#hist-header span{font-weight:600;font-size:1rem}
+#hist-list{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.hist-item{display:flex;align-items:center;gap:10px;padding:12px 4px;border-top:1px solid var(--line)}
+.hist-item:first-child{border-top:0}
+.hist-info{flex:1;min-width:0;cursor:pointer}
+.hist-info:active{opacity:.7}
+.hist-name{font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{font-size:.75rem;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-del{flex-shrink:0;padding:6px 10px;font-size:.8rem;color:#b3261e;border-color:rgba(179,38,30,.4)}
+/* 保存行 */
+.save-row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.save-row input{flex:1;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.save-row input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.save-msg{font-size:.82rem;color:var(--acc);margin-top:4px;min-height:1.2em}
 </style>
 </head>
 <body>
+
+<!-- ── 履歴モーダル ── -->
+<div id="hist-overlay" role="dialog" aria-modal="true" aria-label="計算履歴">
+  <div id="hist-sheet">
+    <div id="hist-header">
+      <span>📋 計算履歴</span>
+      <button type="button" id="hist-close">✕ 閉じる</button>
+    </div>
+    <div id="hist-list"></div>
+  </div>
+</div>
 
 <!-- ── modal ── -->
 <div id="modal-overlay" role="dialog" aria-modal="true" aria-label="爆薬選択">
@@ -189,6 +219,7 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
     <div class="actbar">
       <button id="addItem" type="button" class="primary">+ 爆薬を追加</button>
       <button id="resetAll" type="button">リセット</button>
+      <button id="histOpen" type="button">📋 履歴</button>
     </div>
     <div class="err" id="err" role="alert"></div>
   </section>
@@ -202,6 +233,12 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
     </label>
     <div id="out"><div class="empty">爆薬と数量を入力すると距離が表示されます。</div></div>
     <p class="meta" id="meta"></p>
+    <div class="save-row" id="save-row" hidden>
+      <input type="text" id="save-name" placeholder="名前を入力（例: ○○現場）" maxlength="30">
+      <button type="button" id="save-btn" class="primary">💾 保存</button>
+      <a id="map-btn" href="./map.html" style="flex-shrink:0;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;font-size:.9rem;white-space:nowrap">🗺 地図</a>
+    </div>
+    <p class="save-msg" id="save-msg"></p>
   </section>
 
   <section>
@@ -248,18 +285,10 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
 
 <!-- ボトムナビ：将来の機能追加はここに <a class="bnav-item" href="xxx.html"> を追加 -->
 <nav class="bnav" aria-label="メインナビゲーション">
-  <a class="bnav-item active" href="./index.html" aria-current="page">
-    <span class="bnav-icon" aria-hidden="true">🚨</span>
-    <span>計算</span>
-  </a>
-  <a class="bnav-item" href="./sandbag.html">
-    <span class="bnav-icon" aria-hidden="true">🪏</span>
-    <span>土嚢</span>
-  </a>
-  <a class="bnav-item" href="./convert.html">
-    <span class="bnav-icon" aria-hidden="true">🔄</span>
-    <span>変換</span>
-  </a>
+  <a class="bnav-item active" href="./index.html" aria-current="page"><span class="bnav-icon">🚨</span><span>計算</span></a>
+  <a class="bnav-item" href="./sandbag.html"><span class="bnav-icon">🪏</span><span>土嚢</span></a>
+  <a class="bnav-item" href="./convert.html"><span class="bnav-icon">🔄</span><span>変換</span></a>
+  <a class="bnav-item" href="./map.html"><span class="bnav-icon">🗺</span><span>地図</span></a>
 </nav>
 
 <script>
@@ -506,6 +535,7 @@ function renderItems(){
 function calc(){
   const err=$('err'),out=$('out'),meta=$('meta');
   err.textContent=''; meta.textContent='';
+  $('save-row').hidden=true; $('save-msg').textContent='';
   const used=items.filter(it=>it.name.trim()||it.qty!=='');
   if(!used.length){ out.innerHTML='<div class="empty">爆薬と数量を入力すると距離が表示されます。</div>'; return; }
   let wTnt=0; const parts=[];
@@ -560,8 +590,92 @@ function calc(){
     row.append(left,right); fragWrap.appendChild(row);
   });
   fragOut.appendChild(fragWrap);
+
+  // 保存用サマリ生成
+  const expPart = parts.map(p=>p.split(' → ')[0]).join(' + ');
+  const k16 = Math.ceil(CFG.KS[0].k * Math.cbrt(wLb) * multi);
+  lastSummary = expPart + ' → Essential: '+k16+'m / MFDR: '+mfdrM+'m';
+  $('save-row').hidden = false;
+
+  // 地図用データを保存
+  const k16d=Math.ceil(CFG.KS[0].k*Math.cbrt(wLb)*multi);
+  const k61d=Math.ceil(CFG.KS[1].k*Math.cbrt(wLb)*multi);
+  const k100d=Math.ceil(CFG.KS[2].k*Math.cbrt(wLb)*multi);
+  try{ localStorage.setItem('eod-map-data', JSON.stringify({
+    circles:[
+      {label:'Essential personnel (K=16)', dist:k16d},
+      {label:'Structural damage (K=61)',   dist:k61d},
+      {label:'Non-essential personnel (K=100)', dist:k100d},
+      {label:'HFDR', dist:hfdrM},
+      {label:'MFDR', dist:mfdrM},
+    ],
+    summary: lastSummary,
+    updated: new Date().toLocaleString('ja-JP',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+  })); }catch(e){}
+
   saveState();
 }
+
+// ── 計算履歴 ─────────────────────────────────
+const HIST_KEY = 'eod-history-v1';
+const HIST_MAX = 20;
+let lastSummary = '';
+
+function histLoad(){ try{ return JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); }catch(e){ return []; } }
+function histSave(arr){ try{ localStorage.setItem(HIST_KEY, JSON.stringify(arr)); }catch(e){} }
+
+function histAdd(name){
+  const arr = histLoad();
+  const now = new Date();
+  const date = (now.getMonth()+1)+'/'+(now.getDate())+' '
+    +String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  arr.unshift({ id:Date.now(), name, date, items:JSON.parse(JSON.stringify(items)),
+    multi:$('cb-multi').checked, summary:lastSummary });
+  if(arr.length > HIST_MAX) arr.splice(HIST_MAX);
+  histSave(arr);
+}
+
+function renderHistList(){
+  const list=$('hist-list'); list.replaceChildren();
+  const arr=histLoad();
+  if(!arr.length){
+    const d=document.createElement('div'); d.className='no-match';
+    d.textContent='保存された履歴がありません'; list.appendChild(d); return;
+  }
+  arr.forEach(e=>{
+    const item=document.createElement('div'); item.className='hist-item';
+    const info=document.createElement('div'); info.className='hist-info';
+    info.addEventListener('click',()=>{
+      items=JSON.parse(JSON.stringify(e.items));
+      $('cb-multi').checked=e.multi;
+      $('hist-overlay').classList.remove('open');
+      renderItems(); calc();
+    });
+    const nm=document.createElement('div'); nm.className='hist-name'; nm.textContent=e.name;
+    const mt=document.createElement('div'); mt.className='hist-meta';
+    mt.textContent=e.date+' — '+e.summary;
+    info.append(nm,mt);
+    const del=document.createElement('button'); del.type='button'; del.className='hist-del';
+    del.textContent='削除';
+    del.addEventListener('click',ev=>{ ev.stopPropagation();
+      histSave(histLoad().filter(x=>x.id!==e.id)); renderHistList(); });
+    item.append(info,del); list.appendChild(item);
+  });
+}
+
+$('histOpen').addEventListener('click',()=>{ renderHistList(); $('hist-overlay').classList.add('open'); });
+$('hist-close').addEventListener('click',()=>{ $('hist-overlay').classList.remove('open'); });
+$('hist-overlay').addEventListener('click',e=>{ if(e.target===$('hist-overlay')) $('hist-overlay').classList.remove('open'); });
+
+$('save-btn').addEventListener('click',()=>{
+  const name=$('save-name').value.trim();
+  if(!name){ $('save-name').focus(); return; }
+  histAdd(name);
+  $('save-name').value='';
+  const msg=$('save-msg'); msg.textContent='✓ 「'+name+'」を保存しました';
+  setTimeout(()=>{ msg.textContent=''; },2500);
+});
+$('save-name').addEventListener('keydown',e=>{ if(e.key==='Enter') $('save-btn').click(); });
 
 $('cb-multi').addEventListener('change', calc);
 
