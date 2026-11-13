@@ -22,138 +22,251 @@
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;height:100%;overflow:hidden;
   font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
-  color:var(--ink)}
+  color:var(--ink);font-size:15px}
+#map{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;
+  bottom:calc(52px + env(safe-area-inset-bottom,0px))}
 
-#map{
-  position:fixed;
-  top:env(safe-area-inset-top,0px);
-  left:0;right:0;
-  bottom:calc(56px + env(safe-area-inset-bottom,0px));
-}
+/* 左上ボタン群 */
+#ctrl{position:fixed;top:calc(env(safe-area-inset-top,0px)+10px);
+  left:10px;z-index:400;display:flex;flex-direction:column;gap:6px}
+#ctrl button{padding:7px 11px;border-radius:8px;font:inherit;font-size:.8rem;
+  border:1px solid rgba(0,0,0,.2);background:var(--panel);color:var(--ink);
+  cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.13);white-space:nowrap}
+#ctrl button:disabled{opacity:.45;cursor:default}
+#ctrl button:active{opacity:.7}
 
-/* 操作ボタン（左上） */
-#controls{
-  position:fixed;
-  top:calc(env(safe-area-inset-top,0px) + 12px);
-  left:12px;z-index:400;
-  display:flex;flex-direction:column;gap:6px;
-}
-#controls button{
-  padding:8px 12px;border-radius:8px;font:inherit;font-size:.85rem;
-  border:1px solid rgba(0,0,0,.18);background:var(--panel);color:var(--ink);
-  cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.14);white-space:nowrap;
-}
-#controls button:disabled{opacity:.5;cursor:default}
-#controls button:active{opacity:.7}
-
-/* 凡例パネル（右上） */
-#legend-panel{
-  position:fixed;
-  top:calc(env(safe-area-inset-top,0px) + 12px);
-  right:12px;z-index:400;
-  background:var(--panel);border:1px solid var(--line);
-  border-radius:10px;padding:10px 12px;
-  box-shadow:0 2px 6px rgba(0,0,0,.14);
-  max-width:175px;min-width:140px;font-size:.78rem;
-}
-.lgd-row{display:flex;align-items:center;gap:7px;padding:3px 0}
+/* 右上凡例パネル */
+#legend{position:fixed;top:calc(env(safe-area-inset-top,0px)+10px);
+  right:10px;z-index:400;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:8px 10px;box-shadow:0 2px 6px rgba(0,0,0,.13);
+  max-width:185px;min-width:40px;transition:all .15s}
+#legend.minimized{padding:6px 8px}
+#legend.minimized #legend-body{display:none}
+#legend-toggle{border:none;background:none;cursor:pointer;color:var(--sub);
+  font:inherit;font-size:.75rem;padding:0;float:right;line-height:1}
+#legend-body{margin-top:5px;max-height:45vh;overflow-y:auto;clear:both}
+.lgd-row{display:flex;align-items:center;gap:6px;padding:3px 0;white-space:nowrap}
 .lgd-sw{width:11px;height:11px;border-radius:50%;flex-shrink:0;border:2px solid}
-.lgd-lbl{line-height:1.3;min-width:0}
-.lgd-dist{color:var(--sub);font-variant-numeric:tabular-nums;font-size:.72rem}
-.lgd-hint{font-size:.72rem;color:var(--sub);margin-top:7px;padding-top:6px;
-  border-top:1px solid var(--line);line-height:1.5}
-.lgd-updated{font-size:.7rem;color:var(--sub);margin-bottom:6px;padding-bottom:6px;
-  border-bottom:1px solid var(--line)}
-.lgd-nodata{font-size:.8rem;color:var(--sub);line-height:1.5}
+.lgd-nm{font-size:.72rem;flex:1;overflow:hidden;text-overflow:ellipsis}
+.lgd-dist{font-size:.7rem;color:var(--sub);font-variant-numeric:tabular-nums;flex-shrink:0}
+.lgd-empty{font-size:.72rem;color:var(--sub);padding:2px 0}
 
-/* ズームコントロールをナビの上に配置 */
-.leaflet-bottom.leaflet-right{
-  bottom:calc(60px + env(safe-area-inset-bottom,0px));
-}
+/* 座標バー */
+#coords-bar{position:fixed;bottom:calc(56px + env(safe-area-inset-bottom,0px));
+  left:0;right:0;display:flex;justify-content:center;z-index:400;pointer-events:none}
+#coords-text{background:var(--panel);border:1px solid var(--line);
+  padding:3px 12px;border-radius:16px;font-size:.73rem;color:var(--sub);
+  box-shadow:0 1px 4px rgba(0,0,0,.1);font-variant-numeric:tabular-nums;white-space:nowrap}
 
-/* 座標表示バー */
-#coords-bar{
-  position:fixed;
-  bottom:calc(60px + env(safe-area-inset-bottom,0px));
-  left:0;right:0;
-  display:flex;justify-content:center;
-  z-index:400;pointer-events:none;
-}
-#coords-text{
-  background:var(--panel);border:1px solid var(--line);
-  padding:4px 12px;border-radius:20px;
-  font-size:.75rem;color:var(--sub);
-  box-shadow:0 1px 4px rgba(0,0,0,.12);
-  font-variant-numeric:tabular-nums;
-  white-space:nowrap;
-}
+/* ズーム */
+.leaflet-bottom.leaflet-right{bottom:calc(58px + env(safe-area-inset-bottom,0px))}
 
-/* 設定モーダル */
-#set-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:600;display:none;align-items:flex-end}
-#set-overlay.open{display:flex}
-#set-sheet{background:var(--panel);border-radius:16px 16px 0 0;width:100%;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
-#set-sheet h3{margin:0 0 14px;font-size:1rem}
-#set-sheet select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:12px}
-#set-sheet select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-#set-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-#set-header span{font-weight:600;font-size:1rem}
-#set-sheet button{padding:8px 14px;border-radius:8px;font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
-#set-sheet button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
-.set-row{display:flex;gap:8px}
-.set-saved{font-size:.82rem;color:var(--acc);min-height:1.3em;margin-top:4px}
+/* モーダル共通 */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.46);z-index:600;display:none;align-items:flex-end}
+.modal-ov.open{display:flex}
+.modal-sheet{background:var(--panel);border-radius:16px 16px 0 0;width:100%;
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.modal-hd span{font-weight:600;font-size:.95rem}
+.modal-hd button{padding:5px 10px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
 
-/* ドラッグ可能マーカーのカーソル */
-.leaflet-marker-draggable{cursor:grab}
-.leaflet-marker-draggable:active{cursor:grabbing}
+/* 表示設定シート */
+#settings-body{overflow-y:auto;max-height:70vh}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0 6px;border-bottom:2px solid var(--line);margin-bottom:4px}
+.sec-master{display:flex;align-items:center;gap:8px;font-weight:600;font-size:.9rem;cursor:pointer}
+.sec-master input[type=checkbox]{width:17px;height:17px;accent-color:var(--acc);flex-shrink:0}
+.sec-actions{display:flex;gap:5px}
+.sec-actions button{padding:4px 9px;border-radius:6px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);font:inherit;font-size:.78rem;cursor:pointer}
+.cb-row{display:flex;align-items:center;gap:8px;padding:7px 2px;cursor:pointer;
+  font-size:.85rem;user-select:none}
+.cb-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc);flex-shrink:0}
+.swatch{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid transparent}
+.swatch-dash{background:transparent!important;border-style:dashed}
+.preset-row{display:flex;align-items:center;gap:7px;padding:7px 2px}
+.preset-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc);flex-shrink:0}
+.preset-lbl{flex:1;font-size:.85rem}
+.pdist{width:70px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;
+  background:var(--bg);color:var(--ink);font:inherit;font-size:.85rem;
+  text-align:right;font-variant-numeric:tabular-nums}
+.pdist:disabled{opacity:.4}
+.pdist:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.unit{font-size:.75rem;color:var(--sub);flex-shrink:0}
+.surface-opts{padding:2px 32px 6px;display:flex;flex-direction:column;gap:6px}
+.radio-row{display:flex;align-items:center;gap:7px;font-size:.83rem;cursor:pointer;user-select:none}
+.radio-row input[type=radio]{width:15px;height:15px;accent-color:var(--acc);flex-shrink:0}
+.calc-badge{font-size:.72rem;color:var(--acc);background:var(--bg);
+  padding:1px 7px;border-radius:10px;border:1px solid var(--line)}
+.no-calc-note{font-size:.75rem;color:var(--sub);padding:4px 2px;font-style:italic}
+
+/* プリセット一覧 */
+.preset-list-scroll{max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.plist-item{display:flex;align-items:center;gap:10px;padding:11px 2px;border-top:1px solid var(--line)}
+.plist-item:first-child{border-top:0}
+.plist-info{flex:1;min-width:0;cursor:pointer}
+.plist-info:active{opacity:.7}
+.plist-name{font-weight:600;font-size:.9rem}
+.plist-sub{font-size:.72rem;color:var(--sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plist-del{padding:5px 9px;border-radius:6px;border:1px solid rgba(179,38,30,.35);
+  background:transparent;color:#b3261e;font:inherit;font-size:.78rem;cursor:pointer}
+.empty-msg{color:var(--sub);font-size:.88rem;padding:14px 0;text-align:center}
+
+/* 保存モーダル */
+#save-name-inp{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--ink);font:inherit;margin-bottom:10px}
+.save-fb{font-size:.82rem;color:var(--acc);min-height:1.2em;margin-top:4px}
+.btn-primary{background:var(--acc);color:var(--acc-ink);border:none;border-radius:8px;
+  padding:10px 14px;font:inherit;cursor:pointer;width:100%}
+
+/* エリア設定 */
+#area-sel{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--ink);font:inherit;margin-bottom:10px}
 
 /* ボトムナビ */
-.bnav{
-  position:fixed;bottom:0;left:0;right:0;
+.bnav{position:fixed;bottom:0;left:0;right:0;
   will-change:transform;transform:translateZ(0);
-  background:var(--panel);border-top:1px solid var(--line);
-  display:flex;z-index:500;
-  padding-bottom:env(safe-area-inset-bottom,0px);
-}
-.bnav-item{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  padding:8px 2px 6px;text-decoration:none;color:var(--sub);
-  font-size:.65rem;gap:2px;
-}
+  background:var(--panel);border-top:1px solid var(--line);display:flex;z-index:500;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:7px 2px 5px;text-decoration:none;color:var(--sub);font-size:.62rem;gap:2px}
 .bnav-item.active{color:var(--acc)}
-.bnav-icon{font-size:1.25rem;line-height:1}
+.bnav-icon{font-size:1.2rem;line-height:1}
+.leaflet-marker-draggable{cursor:grab}
+.leaflet-marker-draggable:active{cursor:grabbing}
 </style>
 </head>
 <body>
 
 <div id="map"></div>
 
-<!-- 設定モーダル -->
-<div id="set-overlay">
-  <div id="set-sheet">
-    <div id="set-header">
-      <span>⚙ 初期表示エリア</span>
-      <button type="button" id="set-close">✕ 閉じる</button>
-    </div>
-    <label style="font-size:.85rem;color:var(--sub);display:block;margin-bottom:6px">都道府県を選択してください</label>
-    <select id="pref-sel"></select>
-    <div class="set-row">
-      <button type="button" id="set-save" class="primary">保存</button>
-    </div>
-    <p class="set-saved" id="set-saved"></p>
-  </div>
-</div>
-
-<div id="controls">
+<!-- 左上: 操作ボタン -->
+<div id="ctrl">
   <button id="gps-btn">📍 現在地</button>
-  <button id="set-btn">⚙ エリア設定</button>
+  <button id="layer-btn">📷 航空写真</button>
+  <button id="display-btn">🎯 表示設定</button>
+  <button id="area-btn">⚙ エリア設定</button>
   <button id="clear-btn" hidden>🗑 クリア</button>
 </div>
 
-<div id="legend-panel">
-  <div id="lgd-content"></div>
+<!-- 右上: 凡例（最小化可能） -->
+<div id="legend">
+  <button id="legend-toggle" title="最小化/展開">−</button>
+  <div id="legend-body"></div>
 </div>
 
+<!-- 座標バー -->
 <div id="coords-bar"><span id="coords-text">地図をタップして爆発点を設定</span></div>
+
+<!-- 表示設定モーダル -->
+<div class="modal-ov" id="settings-ov">
+  <div class="modal-sheet">
+    <div class="modal-hd"><span>🎯 表示設定</span><button id="settings-close">✕ 閉じる</button></div>
+    <div id="settings-body">
+
+      <!-- 計算値セクション -->
+      <div class="sec-hd">
+        <label class="sec-master">
+          <input type="checkbox" id="cb-calc-sec" checked>
+          <span>計算値</span>
+        </label>
+      </div>
+      <div id="calc-no-data" class="no-calc-note" hidden>※ 計算ページで計算を実行すると反映されます</div>
+      <label class="cb-row"><input type="checkbox" id="cb-k16" checked>
+        <span class="swatch" style="background:#22c55e30;border-color:#22c55e"></span>Essential personnel (K=16)</label>
+      <label class="cb-row"><input type="checkbox" id="cb-k61" checked>
+        <span class="swatch" style="background:#f59e0b30;border-color:#f59e0b"></span>Structural damage (K=61)</label>
+      <label class="cb-row"><input type="checkbox" id="cb-k100" checked>
+        <span class="swatch" style="background:#ef444430;border-color:#ef4444"></span>Non-essential personnel (K=100)</label>
+      <label class="cb-row"><input type="checkbox" id="cb-hfdr">
+        <span class="swatch swatch-dash" style="border-color:#3b82f6"></span>HFDR（危険破片距離）</label>
+      <label class="cb-row"><input type="checkbox" id="cb-mfdr">
+        <span class="swatch swatch-dash" style="border-color:#8b5cf6"></span>MFDR（最大破片距離）</label>
+
+      <!-- 規定値セクション -->
+      <div class="sec-hd" style="margin-top:14px">
+        <label class="sec-master">
+          <input type="checkbox" id="cb-preset-sec" checked>
+          <span>規定値</span>
+        </label>
+        <div class="sec-actions">
+          <button id="preset-save-open">💾 保存</button>
+          <button id="preset-load-open">📋 読込</button>
+        </div>
+      </div>
+
+      <div class="preset-row">
+        <input type="checkbox" id="cb-solid" checked>
+        <span class="swatch" style="background:#0ea5e930;border-color:#0ea5e9"></span>
+        <span class="preset-lbl">強固な処分壕</span>
+        <input type="number" class="pdist" id="dist-solid" min="0" placeholder="距離">
+        <span class="unit">m</span>
+      </div>
+      <div class="preset-row">
+        <input type="checkbox" id="cb-simple" checked>
+        <span class="swatch" style="background:#10b98130;border-color:#10b981"></span>
+        <span class="preset-lbl">簡易な処分壕</span>
+        <input type="number" class="pdist" id="dist-simple" min="0" placeholder="距離">
+        <span class="unit">m</span>
+      </div>
+      <div class="preset-row">
+        <input type="checkbox" id="cb-chamber" checked>
+        <span class="swatch" style="background:#f9731630;border-color:#f97316"></span>
+        <span class="preset-lbl">チャンバー</span>
+        <input type="number" class="pdist" id="dist-chamber" min="0" placeholder="距離">
+        <span class="unit">m</span>
+      </div>
+      <div class="preset-row">
+        <input type="checkbox" id="cb-surface" checked>
+        <span class="swatch swatch-dash" style="border-color:#dc2626"></span>
+        <span class="preset-lbl">地表爆破</span>
+      </div>
+      <div class="surface-opts">
+        <label class="radio-row">
+          <input type="radio" name="surf-mode" id="surf-calc" value="calc" checked>
+          K=100計算値を使用 <span class="calc-badge" id="surf-calc-badge"></span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="surf-mode" id="surf-manual" value="manual">
+          直接入力
+          <input type="number" class="pdist" id="dist-surface" min="0" placeholder="距離" disabled>
+          <span class="unit">m</span>
+        </label>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- プリセット保存モーダル -->
+<div class="modal-ov" id="save-ov">
+  <div class="modal-sheet">
+    <div class="modal-hd"><span>💾 規定値を保存</span><button id="save-close">✕ 閉じる</button></div>
+    <input id="save-name-inp" type="text" placeholder="プリセット名（例: ○○現場）" maxlength="30">
+    <button class="btn-primary" id="save-confirm">保存</button>
+    <p class="save-fb" id="save-fb"></p>
+  </div>
+</div>
+
+<!-- プリセット読込モーダル -->
+<div class="modal-ov" id="load-ov">
+  <div class="modal-sheet">
+    <div class="modal-hd"><span>📋 規定値を読込</span><button id="load-close">✕ 閉じる</button></div>
+    <div class="preset-list-scroll" id="preset-list"></div>
+  </div>
+</div>
+
+<!-- エリア設定モーダル -->
+<div class="modal-ov" id="area-ov">
+  <div class="modal-sheet">
+    <div class="modal-hd"><span>⚙ 初期表示エリア</span><button id="area-close">✕ 閉じる</button></div>
+    <label style="font-size:.85rem;color:var(--sub);display:block;margin-bottom:6px">都道府県を選択</label>
+    <select id="area-sel"></select>
+    <button class="btn-primary" id="area-save">保存</button>
+    <p class="save-fb" id="area-fb"></p>
+  </div>
+</div>
 
 <nav class="bnav" aria-label="メインナビゲーション">
   <a class="bnav-item" href="./index.html"><span class="bnav-icon">🚨</span><span>計算</span></a>
@@ -165,9 +278,11 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+const ls  = key => { try{ return JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ return null; } };
+const lsS = (key,val) => { try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){}};
 
-// ── 都道府県データ ────────────────────────────
-const PREFS = [
+// ── 都道府県 ──────────────────────────────────
+const PREFS=[
   {n:'北海道',lat:43.0642,lng:141.3469},{n:'青森',lat:40.8244,lng:140.7400},
   {n:'岩手',lat:39.7036,lng:141.1527},{n:'宮城',lat:38.2688,lng:140.8721},
   {n:'秋田',lat:39.7186,lng:140.1023},{n:'山形',lat:38.2404,lng:140.3634},
@@ -193,168 +308,305 @@ const PREFS = [
   {n:'宮崎',lat:31.9110,lng:131.4237},{n:'鹿児島',lat:31.5602,lng:130.5581},
   {n:'沖縄',lat:26.2124,lng:127.6809},
 ];
+PREFS.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.n; $('area-sel').appendChild(o); });
 
-const HOME_KEY = 'eod-map-home';
+// ── LocalStorage キー ─────────────────────────
+const KEY_HOME     = 'eod-map-home';
+const KEY_CALC_CFG = 'eod-calc-cfg';
+const KEY_PRST_CFG = 'eod-preset-cfg';
+const KEY_PRST_SAV = 'eod-preset-saves';
 
-// セレクトを生成
-PREFS.forEach((p,i)=>{
-  const o=document.createElement('option');
-  o.value=i; o.textContent=p.n; $('pref-sel').appendChild(o);
+// ── 設定の読み込み ────────────────────────────
+let home = {lat:35.6762,lng:139.6503};
+const h=ls(KEY_HOME); if(h){ home=h; const idx=PREFS.findIndex(p=>p.n===h.name); if(idx>=0) $('area-sel').value=idx; }
+
+// 計算値チェックボックス復元
+const calcCfg = ls(KEY_CALC_CFG)||{sec:true,k16:true,k61:true,k100:true,hfdr:false,mfdr:false};
+$('cb-calc-sec').checked=calcCfg.sec; $('cb-k16').checked=calcCfg.k16;
+$('cb-k61').checked=calcCfg.k61; $('cb-k100').checked=calcCfg.k100;
+$('cb-hfdr').checked=calcCfg.hfdr; $('cb-mfdr').checked=calcCfg.mfdr;
+
+// 規定値設定復元
+const prCfg = ls(KEY_PRST_CFG)||{sec:true,
+  solid:{en:true,dist:''}, simple:{en:true,dist:''}, chamber:{en:true,dist:''},
+  surface:{en:true,mode:'calc',dist:''}};
+$('cb-preset-sec').checked=prCfg.sec;
+$('cb-solid').checked=prCfg.solid.en; $('dist-solid').value=prCfg.solid.dist||'';
+$('cb-simple').checked=prCfg.simple.en; $('dist-simple').value=prCfg.simple.dist||'';
+$('cb-chamber').checked=prCfg.chamber.en; $('dist-chamber').value=prCfg.chamber.dist||'';
+$('cb-surface').checked=prCfg.surface.en;
+if(prCfg.surface.mode==='manual'){ $('surf-manual').checked=true; $('dist-surface').disabled=false; }
+$('dist-surface').value=prCfg.surface.dist||'';
+
+// ── 地図初期化 ───────────────────────────────
+const map=L.map('map',{zoomControl:false}).setView([home.lat,home.lng],12);
+L.control.zoom({position:'bottomright'}).addTo(map);
+
+const layerOSM=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19});
+const layerGSI=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',{
+  attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',maxZoom:18});
+let curLayer='osm'; layerOSM.addTo(map);
+
+$('layer-btn').addEventListener('click',()=>{
+  if(curLayer==='osm'){ map.removeLayer(layerOSM); layerGSI.addTo(map); curLayer='gsi'; $('layer-btn').textContent='🗺 地図に戻す'; }
+  else { map.removeLayer(layerGSI); layerOSM.addTo(map); curLayer='osm'; $('layer-btn').textContent='📷 航空写真'; }
 });
 
-// 保存済みホームを読み込み
-let home = {lat:35.6762,lng:139.6503}; // デフォルト: 東京
-try{
-  const s=JSON.parse(localStorage.getItem(HOME_KEY)||'null');
-  if(s){ home=s; const idx=PREFS.findIndex(p=>p.n===s.name); if(idx>=0) $('pref-sel').value=idx; }
-}catch(e){}
+// ── 状態保存 ─────────────────────────────────
+function saveCalcCfg(){
+  lsS(KEY_CALC_CFG,{sec:$('cb-calc-sec').checked,k16:$('cb-k16').checked,
+    k61:$('cb-k61').checked,k100:$('cb-k100').checked,
+    hfdr:$('cb-hfdr').checked,mfdr:$('cb-mfdr').checked});
+}
+function savePrCfg(){
+  lsS(KEY_PRST_CFG,{sec:$('cb-preset-sec').checked,
+    solid:{en:$('cb-solid').checked,dist:$('dist-solid').value},
+    simple:{en:$('cb-simple').checked,dist:$('dist-simple').value},
+    chamber:{en:$('cb-chamber').checked,dist:$('dist-chamber').value},
+    surface:{en:$('cb-surface').checked,mode:$('surf-manual').checked?'manual':'calc',dist:$('dist-surface').value}
+  });
+}
 
-// 設定モーダル
-$('set-btn').addEventListener('click',()=>$('set-overlay').classList.add('open'));
-$('set-close').addEventListener('click',()=>$('set-overlay').classList.remove('open'));
-$('set-overlay').addEventListener('click',e=>{ if(e.target===$('set-overlay')) $('set-overlay').classList.remove('open'); });
-$('set-save').addEventListener('click',()=>{
-  const p=PREFS[Number($('pref-sel').value)];
-  home={lat:p.lat,lng:p.lng,name:p.n};
-  try{ localStorage.setItem(HOME_KEY,JSON.stringify(home)); }catch(e){}
-  map.setView([p.lat,p.lng],10);
-  $('set-saved').textContent='✓ 「'+p.n+'」を初期エリアに設定しました';
-  setTimeout(()=>{ $('set-saved').textContent=''; $('set-overlay').classList.remove('open'); },1500);
-});
-
-// 凡例設定（色・スタイル）
-const STYLES = [
-  { color:'#16a34a', fill:0.15, dash:null  }, // Essential (K=16)
-  { color:'#d97706', fill:0.15, dash:null  }, // Structural (K=61)
-  { color:'#dc2626', fill:0.15, dash:null  }, // Non-essential (K=100)
-  { color:'#2563eb', fill:0.10, dash:'6 4' }, // HFDR
-  { color:'#7c3aed', fill:0.08, dash:'8 5' }, // MFDR
+// ── 計算値ロード ─────────────────────────────
+const CALC_DEF=[
+  {id:'k16', label:'Essential (K=16)',    color:'#22c55e',fill:.12},
+  {id:'k61', label:'Structural (K=61)',   color:'#f59e0b',fill:.12},
+  {id:'k100',label:'Non-essential (K=100)',color:'#ef4444',fill:.12},
+  {id:'hfdr',label:'HFDR',               color:'#3b82f6',fill:.08,dash:'6 4'},
+  {id:'mfdr',label:'MFDR',               color:'#8b5cf6',fill:.06,dash:'8 5'},
+];
+const PRESET_DEF=[
+  {id:'solid',  label:'強固な処分壕', color:'#0ea5e9',fill:.12},
+  {id:'simple', label:'簡易な処分壕', color:'#10b981',fill:.12},
+  {id:'chamber',label:'チャンバー',   color:'#f97316',fill:.12},
 ];
 
-// locaStorageからデータ読み込み
-let mapData = null;
-try{ mapData = JSON.parse(localStorage.getItem('eod-map-data')||'null'); }catch(e){}
+function updateSurfaceBadge(){
+  const d=ls('eod-map-data');
+  const k100dist = d?.circles?.[2]?.dist;
+  $('surf-calc-badge').textContent = k100dist ? k100dist.toLocaleString('ja-JP')+'m' : '（計算値なし）';
+  $('calc-no-data').hidden = !!d;
+}
+updateSurfaceBadge();
 
-// 凡例パネル描画
-function buildLegend(){
-  const el = $('lgd-content'); el.replaceChildren();
-  if(!mapData){
-    const d=document.createElement('div'); d.className='lgd-nodata';
-    d.textContent='計算ページで計算を実行してから開いてください。';
-    el.appendChild(d); return;
+function getAllCircles(){
+  const result=[]; const d=ls('eod-map-data');
+  // 計算値
+  if($('cb-calc-sec').checked && d?.circles){
+    const checks=['k16','k61','k100','hfdr','mfdr'];
+    CALC_DEF.forEach((def,i)=>{
+      if($('cb-'+def.id).checked && d.circles[i]?.dist>0){
+        result.push({label:d.circles[i].label||def.label,dist:d.circles[i].dist,
+          color:def.color,fill:def.fill,dash:def.dash||null});
+      }
+    });
   }
-  if(mapData.updated){
-    const u=document.createElement('div'); u.className='lgd-updated';
-    u.textContent=mapData.updated; el.appendChild(u);
+  // 規定値
+  if($('cb-preset-sec').checked){
+    PRESET_DEF.forEach(def=>{
+      const dist=parseFloat($('dist-'+def.id).value);
+      if($('cb-'+def.id).checked && dist>0){
+        result.push({label:def.label,dist,color:def.color,fill:def.fill});
+      }
+    });
+    // 地表爆破
+    if($('cb-surface').checked){
+      let dist=0;
+      if($('surf-manual').checked){ dist=parseFloat($('dist-surface').value)||0; }
+      else { dist=ls('eod-map-data')?.circles?.[2]?.dist||0; }
+      if(dist>0) result.push({label:'地表爆破',dist,color:'#dc2626',fill:.10,dash:'4 3'});
+    }
   }
-  mapData.circles.forEach((c,i)=>{
-    const st=STYLES[i]||STYLES[0];
+  return result;
+}
+
+// ── 凡例更新 ─────────────────────────────────
+function updateLegend(){
+  const body=$('legend-body'); body.replaceChildren();
+  const all=getAllCircles();
+  if(!all.length){
+    const d=document.createElement('div'); d.className='lgd-empty'; d.textContent='表示設定で円を有効に'; body.appendChild(d); return;
+  }
+  all.forEach(item=>{
     const row=document.createElement('div'); row.className='lgd-row';
-    const sw=document.createElement('div'); sw.className='lgd-sw';
-    sw.style.cssText='background:'+st.color+'30;border-color:'+st.color;
-    const lbl=document.createElement('div'); lbl.className='lgd-lbl';
-    lbl.innerHTML=c.label+'<br><span class="lgd-dist">'+c.dist.toLocaleString('ja-JP')+' m</span>';
-    row.append(sw,lbl); el.appendChild(row);
+    const sw=document.createElement('span'); sw.className='lgd-sw';
+    sw.style.cssText=`background:${item.color}30;border-color:${item.color}${item.dash?';border-style:dashed':''}`;
+    const nm=document.createElement('span'); nm.className='lgd-nm'; nm.textContent=item.label;
+    const dist=document.createElement('span'); dist.className='lgd-dist'; dist.textContent=item.dist.toLocaleString('ja-JP')+'m';
+    row.append(sw,nm,dist); body.appendChild(row);
   });
-  const hint=document.createElement('div'); hint.className='lgd-hint';
-  hint.textContent='地図をタップして爆発点を設定';
-  el.appendChild(hint);
 }
+updateLegend();
 
-// 地図初期化（保存済みホームエリアを使用）
-const map=L.map('map',{zoomControl:false}).setView([home.lat,home.lng],10);
-L.control.zoom({position:'bottomright'}).addTo(map);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom:19
-}).addTo(map);
+// ── 凡例最小化 ───────────────────────────────
+let legendMin=false;
+$('legend-toggle').addEventListener('click',()=>{
+  legendMin=!legendMin;
+  $('legend').classList.toggle('minimized',legendMin);
+  $('legend-toggle').textContent=legendMin?'＋':'−';
+});
 
+// ── マーカー・円 ─────────────────────────────
 let marker=null, circles=[];
-
-// 座標表示の更新
-function updateCoords(ll){
-  $('coords-text').textContent=
-    '📍 '+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5);
-}
-
-// 爆発点マーカーアイコン
 const bombIcon=L.divIcon({
   html:'<div style="font-size:28px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">💥</div>',
   iconSize:[32,32],iconAnchor:[16,16],className:''
 });
 
-// 爆発点をセットして円を描く
-function setPoint(latlng){
-  if(marker) map.removeLayer(marker);
+function drawCircles(ll){
   circles.forEach(c=>map.removeLayer(c)); circles=[];
-
-  // ドラッグ可能なマーカーを配置
-  marker=L.marker(latlng,{icon:bombIcon,draggable:true,zIndexOffset:1000}).addTo(map);
-
-  // ドラッグ中: 円をリアルタイムで追従
-  marker.on('drag',e=>{
-    const ll=e.latlng;
-    circles.forEach(c=>c.setLatLng(ll));
-    updateCoords(ll);
+  const all=getAllCircles();
+  all.sort((a,b)=>b.dist-a.dist);
+  let maxR=0;
+  all.forEach(item=>{
+    const c=L.circle(ll,{radius:item.dist,color:item.color,fillColor:item.color,
+      fillOpacity:item.fill,weight:2,dashArray:item.dash||undefined}).addTo(map);
+    c.bindTooltip(item.label+': '+item.dist.toLocaleString('ja-JP')+'m');
+    circles.push(c);
+    if(item.dist>maxR) maxR=item.dist;
   });
+  if(maxR>0) map.fitBounds(L.circle(ll,{radius:maxR}).getBounds().pad(.1));
+}
 
-  // ドラッグ終了: 座標を確定
-  marker.on('dragend',e=>{
-    updateCoords(e.target.getLatLng());
-  });
-
-  updateCoords(latlng);
-
-  if(!mapData){ $('clear-btn').hidden=false; return; }
-
-  // 大きい円から順に描画（小さい円が前面）
-  const sorted=[...mapData.circles].sort((a,b)=>b.dist-a.dist);
-  sorted.forEach(c=>{
-    const idx=mapData.circles.indexOf(c);
-    const st=STYLES[idx]||STYLES[0];
-    const circle=L.circle(latlng,{
-      radius:c.dist, color:st.color, weight:2,
-      fillColor:st.color, fillOpacity:st.fill,
-      dashArray:st.dash||undefined
-    }).addTo(map);
-    circle.bindTooltip(c.label+': '+c.dist.toLocaleString('ja-JP')+'m');
-    circles.push(circle);
-  });
-
-  // 最大円にフィット
-  const maxR=Math.max(...mapData.circles.map(c=>c.dist));
-  map.fitBounds(L.circle(latlng,{radius:maxR}).getBounds().pad(0.1));
+function setPoint(ll){
+  if(marker) map.removeLayer(marker);
+  marker=L.marker(ll,{icon:bombIcon,draggable:true,zIndexOffset:1000}).addTo(map);
+  marker.on('drag',e=>{ circles.forEach(c=>c.setLatLng(e.latlng)); updateCoords(e.latlng); });
+  marker.on('dragend',e=>updateCoords(e.target.getLatLng()));
+  updateCoords(ll); drawCircles(ll); updateLegend();
   $('clear-btn').hidden=false;
 }
 
+function updateCoords(ll){ $('coords-text').textContent='📍 '+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5); }
+
 map.on('click',e=>setPoint(e.latlng));
 
-// GPS
 $('gps-btn').addEventListener('click',()=>{
   if(!navigator.geolocation){ alert('GPSに対応していません'); return; }
   const btn=$('gps-btn'); btn.textContent='📍 取得中…'; btn.disabled=true;
   navigator.geolocation.getCurrentPosition(
-    pos=>{
-      const ll=L.latLng(pos.coords.latitude,pos.coords.longitude);
-      map.setView(ll,15); setPoint(ll);
-      btn.textContent='📍 現在地'; btn.disabled=false;
-    },
-    ()=>{
-      btn.textContent='📍 現在地'; btn.disabled=false;
-      alert('位置情報の取得に失敗しました。\nブラウザの設定でChromeに位置情報の許可を与えてください。');
-    },
+    pos=>{ const ll=L.latLng(pos.coords.latitude,pos.coords.longitude);
+      map.setView(ll,15); setPoint(ll); btn.textContent='📍 現在地'; btn.disabled=false; },
+    ()=>{ btn.textContent='📍 現在地'; btn.disabled=false;
+      alert('位置情報の取得に失敗しました。\nブラウザで位置情報を許可してください。'); },
     {enableHighAccuracy:true,timeout:10000}
   );
 });
 
-// クリア
 $('clear-btn').addEventListener('click',()=>{
   if(marker){ map.removeLayer(marker); marker=null; }
   circles.forEach(c=>map.removeLayer(c)); circles=[];
   $('clear-btn').hidden=true;
+  $('coords-text').textContent='地図をタップして爆発点を設定';
+  updateLegend();
 });
 
-buildLegend();
+// ── 表示設定モーダル ─────────────────────────
+function openSettings(){ updateSurfaceBadge(); $('settings-ov').classList.add('open'); }
+$('display-btn').addEventListener('click',openSettings);
+$('settings-close').addEventListener('click',()=>$('settings-ov').classList.remove('open'));
+$('settings-ov').addEventListener('click',e=>{ if(e.target===$('settings-ov')) $('settings-ov').classList.remove('open'); });
+
+// 設定変更時: 即時再描画
+function onSettingChange(){ saveCalcCfg(); savePrCfg(); updateLegend(); if(marker) drawCircles(marker.getLatLng()); }
+['cb-calc-sec','cb-k16','cb-k61','cb-k100','cb-hfdr','cb-mfdr',
+ 'cb-preset-sec','cb-solid','cb-simple','cb-chamber','cb-surface'].forEach(id=>{
+  $(id).addEventListener('change',onSettingChange);
+});
+['dist-solid','dist-simple','dist-chamber','dist-surface'].forEach(id=>{
+  $(id).addEventListener('input',onSettingChange);
+});
+document.querySelectorAll('[name=surf-mode]').forEach(r=>{
+  r.addEventListener('change',()=>{
+    const isManual=$('surf-manual').checked;
+    $('dist-surface').disabled=!isManual;
+    onSettingChange();
+  });
+});
+
+// ── 規定値プリセット ─────────────────────────
+function getPresets(){ return ls(KEY_PRST_SAV)||[]; }
+function savePresetsList(arr){ lsS(KEY_PRST_SAV,arr); }
+
+function getPresetSummary(){
+  const parts=[];
+  PRESET_DEF.forEach(def=>{ const d=parseFloat($('dist-'+def.id).value); if($('cb-'+def.id).checked&&d>0) parts.push(def.label+' '+d+'m'); });
+  if($('cb-surface').checked){
+    const mode=$('surf-manual').checked?'manual':'calc';
+    if(mode==='manual'){ const d=parseFloat($('dist-surface').value); if(d>0) parts.push('地表爆破 '+d+'m'); }
+    else parts.push('地表爆破 K100計算値');
+  }
+  return parts.join(' / ')||'（距離未入力）';
+}
+
+function getCurrentPresetData(){
+  return {
+    solid:{en:$('cb-solid').checked,dist:$('dist-solid').value},
+    simple:{en:$('cb-simple').checked,dist:$('dist-simple').value},
+    chamber:{en:$('cb-chamber').checked,dist:$('dist-chamber').value},
+    surface:{en:$('cb-surface').checked,mode:$('surf-manual').checked?'manual':'calc',dist:$('dist-surface').value},
+  };
+}
+
+function applyPresetData(data){
+  $('cb-solid').checked=data.solid.en;    $('dist-solid').value=data.solid.dist||'';
+  $('cb-simple').checked=data.simple.en;  $('dist-simple').value=data.simple.dist||'';
+  $('cb-chamber').checked=data.chamber.en;$('dist-chamber').value=data.chamber.dist||'';
+  $('cb-surface').checked=data.surface.en;
+  if(data.surface.mode==='manual'){ $('surf-manual').checked=true; $('dist-surface').disabled=false; }
+  else { $('surf-calc').checked=true; $('dist-surface').disabled=true; }
+  $('dist-surface').value=data.surface.dist||'';
+  onSettingChange();
+}
+
+// 保存
+$('preset-save-open').addEventListener('click',()=>{ $('save-name-inp').value=''; $('save-fb').textContent=''; $('save-ov').classList.add('open'); setTimeout(()=>$('save-name-inp').focus(),150); });
+$('save-close').addEventListener('click',()=>$('save-ov').classList.remove('open'));
+$('save-ov').addEventListener('click',e=>{ if(e.target===$('save-ov')) $('save-ov').classList.remove('open'); });
+$('save-confirm').addEventListener('click',()=>{
+  const name=$('save-name-inp').value.trim(); if(!name){ $('save-name-inp').focus(); return; }
+  const arr=getPresets();
+  arr.unshift({id:Date.now(),name,summary:getPresetSummary(),data:getCurrentPresetData()});
+  if(arr.length>30) arr.splice(30);
+  savePresetsList(arr);
+  $('save-fb').textContent='✓ 「'+name+'」を保存しました';
+  setTimeout(()=>$('save-ov').classList.remove('open'),1200);
+});
+$('save-name-inp').addEventListener('keydown',e=>{ if(e.key==='Enter') $('save-confirm').click(); });
+
+// 読込
+function renderPresetList(){
+  const list=$('preset-list'); list.replaceChildren();
+  const arr=getPresets();
+  if(!arr.length){ const d=document.createElement('div'); d.className='empty-msg'; d.textContent='保存された規定値がありません'; list.appendChild(d); return; }
+  arr.forEach(p=>{
+    const item=document.createElement('div'); item.className='plist-item';
+    const info=document.createElement('div'); info.className='plist-info';
+    const nm=document.createElement('div'); nm.className='plist-name'; nm.textContent=p.name;
+    const sub=document.createElement('div'); sub.className='plist-sub'; sub.textContent=p.summary;
+    info.append(nm,sub);
+    info.addEventListener('click',()=>{ applyPresetData(p.data); $('load-ov').classList.remove('open'); });
+    const del=document.createElement('button'); del.className='plist-del'; del.textContent='削除';
+    del.addEventListener('click',ev=>{ ev.stopPropagation(); savePresetsList(getPresets().filter(x=>x.id!==p.id)); renderPresetList(); });
+    item.append(info,del); list.appendChild(item);
+  });
+}
+$('preset-load-open').addEventListener('click',()=>{ renderPresetList(); $('load-ov').classList.add('open'); });
+$('load-close').addEventListener('click',()=>$('load-ov').classList.remove('open'));
+$('load-ov').addEventListener('click',e=>{ if(e.target===$('load-ov')) $('load-ov').classList.remove('open'); });
+
+// ── エリア設定 ───────────────────────────────
+$('area-btn').addEventListener('click',()=>$('area-ov').classList.add('open'));
+$('area-close').addEventListener('click',()=>$('area-ov').classList.remove('open'));
+$('area-ov').addEventListener('click',e=>{ if(e.target===$('area-ov')) $('area-ov').classList.remove('open'); });
+$('area-save').addEventListener('click',()=>{
+  const p=PREFS[Number($('area-sel').value)];
+  home={lat:p.lat,lng:p.lng,name:p.n}; lsS(KEY_HOME,home);
+  map.setView([p.lat,p.lng],12);
+  $('area-fb').textContent='✓ 「'+p.n+'」を設定しました';
+  setTimeout(()=>{ $('area-fb').textContent=''; $('area-ov').classList.remove('open'); },1200);
+});
 </script>
 </body>
 </html>

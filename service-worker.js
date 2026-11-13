@@ -1,4 +1,4 @@
-const CACHE = 'evac-v4';
+const CACHE = 'evac-v5';
 const FILES = [
   './',
   './index.html',
