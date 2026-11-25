@@ -186,11 +186,27 @@ details summary::-webkit-details-marker{color:var(--acc)}
       <option value="5">四面＋屋根（5面・全囲い）</option>
     </select>
 
-    <div class="sb-info" style="margin-top:12px">
-      <strong>土嚢サイズ（参考値）</strong><br>
-      充填時: 幅 14" (35.6cm) × 長さ 26" (66cm) × 厚さ 4" (10cm)<br>
-      ※1層4inch(10cm)として計算。実際の充填量・土質により変動します。
+    <label for="sbUnit" style="margin-top:12px">土嚢サイズの単位</label>
+    <select id="sbUnit">
+      <option value="in">inch</option>
+      <option value="cm">cm</option>
+    </select>
+    <div class="irow">
+      <label>長さ</label>
+      <input type="number" id="sbLen" min="0" step="0.01">
+      <span class="unit" id="sbUnitLen">in</span>
     </div>
+    <div class="irow">
+      <label>幅</label>
+      <input type="number" id="sbWid" min="0" step="0.01">
+      <span class="unit" id="sbUnitWid">in</span>
+    </div>
+    <div class="irow">
+      <label>厚さ（充填時）</label>
+      <input type="number" id="sbThk" min="0" step="0.01">
+      <span class="unit" id="sbUnitThk">in</span>
+    </div>
+    <div class="sb-info" id="sbInfo" style="margin-top:8px"></div>
   </section>
 
   <!-- ④ 結果 -->
@@ -275,7 +291,9 @@ const MUNITIONS = [
 ];
 
 // 土嚢1枚のサイズ (m)
-const SB = { w: 0.660, h: 0.356, thick: 0.1016 }; // 26"×14"×4"
+// 土嚢1枚のサイズ（既定: US規格 26"×14"×4"）。単位切替・入力で変更される
+let SB = { w: 0.660, h: 0.356, thickIn: 4 };
+const SB_DEFAULT_IN = { len: 26, wid: 14, thk: 4 };
 
 const $  = id => document.getElementById(id);
 const ft2m = ft => ft * 0.3048;
@@ -294,6 +312,49 @@ MUNITIONS.forEach(m => {
     `<td>${m.concP}</td><td>${m.concS}</td><td>${m.wood}</td>`;
   document.getElementById('refT3').appendChild(r3);
 });
+
+// ── 土嚢サイズ入力 ────────────────────────────────────
+function sbUnitLabel(){
+  const u = $('sbUnit').value === 'cm' ? 'cm' : 'in';
+  $('sbUnitLen').textContent = u;
+  $('sbUnitWid').textContent = u;
+  $('sbUnitThk').textContent = u;
+}
+// 単位を切り替えたとき、入力中の値を新しい単位へ換算する
+$('sbUnit').addEventListener('change', () => {
+  const from = $('sbUnit').dataset.prev || 'in';
+  const to   = $('sbUnit').value;
+  if (from !== to) {
+    const f = from === 'cm' ? 1 / 2.54 : 1;   // 元の単位 -> inch
+    const t = to === 'cm' ? 2.54 : 1;         // inch -> 新しい単位
+    ['sbLen', 'sbWid', 'sbThk'].forEach(id => {
+      const v = parseFloat($(id).value);
+      if (v > 0) $(id).value = +(v * f * t).toFixed(2);
+    });
+  }
+  $('sbUnit').dataset.prev = to;
+  sbUnitLabel();
+  calc();
+});
+// 既定値（US規格 26"×14"×4"）を現在の単位で表示
+function sbSetDefaults(){
+  const u = $('sbUnit').value;
+  const k = u === 'cm' ? 2.54 : 1;
+  $('sbLen').value = +(SB_DEFAULT_IN.len * k).toFixed(2);
+  $('sbWid').value = +(SB_DEFAULT_IN.wid * k).toFixed(2);
+  $('sbThk').value = +(SB_DEFAULT_IN.thk * k).toFixed(2);
+  $('sbUnit').dataset.prev = u;
+  sbUnitLabel();
+}
+// 入力値から土嚢サイズを読み取る（w,h は m、thickIn は inch）。不正なら null
+function readSbDims(){
+  const k = $('sbUnit').value === 'cm' ? 1 / 2.54 : 1;
+  const len = parseFloat($('sbLen').value) * k;
+  const wid = parseFloat($('sbWid').value) * k;
+  const thk = parseFloat($('sbThk').value) * k;
+  if (!(len > 0) || !(wid > 0) || !(thk > 0)) return null;
+  return { w: len * 0.0254, h: wid * 0.0254, thickIn: thk };
+}
 
 // ── 弾種選択イベント ──────────────────────────────────
 $('munSel').addEventListener('change', () => {
@@ -330,7 +391,7 @@ $('munSel').addEventListener('change', () => {
 });
 
 // ── 寸法・面数イベント ────────────────────────────────
-['inWidth','inHeight','selFaces'].forEach(id => {
+['inWidth','inHeight','selFaces','sbLen','sbWid','sbThk'].forEach(id => {
   $(id).addEventListener('input', calc);
   $(id).addEventListener('change', calc);
 });
@@ -361,7 +422,18 @@ function calc() {
     return;
   }
 
-  const layers    = Math.ceil(m.sandIn / 4);           // 4inch/層
+  const dims = readSbDims();
+  if (!dims) {
+    $('sbInfo').innerHTML = '<span style="color:#b00020">土嚢の長さ・幅・厚さをすべて正の数で入力してください。</span>';
+    $('secResult').hidden = true;
+    return;
+  }
+  SB = dims;
+  $('sbInfo').innerHTML = '<strong>土嚢サイズ</strong>: 長さ ' + (SB.w/0.0254).toFixed(2) + '" ('
+    + (SB.w*100).toFixed(1) + 'cm) × 幅 ' + (SB.h/0.0254).toFixed(2) + '" (' + (SB.h*100).toFixed(1)
+    + 'cm) × 厚さ ' + SB.thickIn.toFixed(2) + '" (' + (SB.thickIn*2.54).toFixed(1) + 'cm)<br>'
+    + '※1層＝土嚢1枚の厚さとして計算。実際の充填量・土質により変動します。';
+  const layers    = Math.ceil(m.sandIn / SB.thickIn);  // 土嚢の厚さ/層
   const perRowH   = Math.ceil(w / SB.w);               // 横方向の枚数
   const perColH   = Math.ceil(h / SB.h);               // 縦方向の枚数
   const perLayer  = perRowH * perColH;                  // 1層1面あたり
@@ -373,7 +445,7 @@ function calc() {
   $('resGrid').innerHTML = `
     <div class="res-row">
       <span class="rnm">必要層数</span>
-      <span class="rval">${layers} <small>層 (${m.sandIn}" ÷ 4"/層)</small></span>
+      <span class="rval">${layers} <small>層 (${m.sandIn}" ÷ ${SB.thickIn.toFixed(2)}"/層)</small></span>
     </div>
     <div class="res-row">
       <span class="rnm">1層・1面あたり<br><small style="font-size:.75rem">(横${perRowH}枚 × 縦${perColH}枚)</small></span>
@@ -399,7 +471,11 @@ function sbSave(){
     mun:   $('munSel').value,
     w:     $('inWidth').value,
     h:     $('inHeight').value,
-    faces: $('selFaces').value
+    faces: $('selFaces').value,
+    sbUnit: $('sbUnit').value,
+    sbLen: $('sbLen').value,
+    sbWid: $('sbWid').value,
+    sbThk: $('sbThk').value
   })); }catch(e){}
 }
 function sbLoad(){
@@ -410,11 +486,17 @@ function sbLoad(){
     if(s.w)                   $('inWidth').value  = s.w;
     if(s.h)                   $('inHeight').value = s.h;
     if(s.faces)               $('selFaces').value = s.faces;
+    if(s.sbUnit)              { $('sbUnit').value = s.sbUnit; $('sbUnit').dataset.prev = s.sbUnit; }
+    if(s.sbLen)               $('sbLen').value = s.sbLen;
+    if(s.sbWid)               $('sbWid').value = s.sbWid;
+    if(s.sbThk)               $('sbThk').value = s.sbThk;
   }catch(e){}
 }
 
 // ── 初期化（保存データを復元） ────────────────
+sbSetDefaults();
 sbLoad();
+sbUnitLabel();
 if($('munSel').value) $('munSel').dispatchEvent(new Event('change'));
 </script>
 </body>

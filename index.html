@@ -175,6 +175,18 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
 .save-row input{flex:1;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
 .save-row input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .save-msg{font-size:.82rem;color:var(--acc);margin-top:4px;min-height:1.2em}
+/* 計算ログ */
+details.log-det summary{cursor:pointer;color:var(--acc);font-size:.88rem;padding:3px 0;user-select:none}
+.log-step{margin-bottom:12px}
+.log-title{font-size:.78rem;font-weight:700;color:var(--sub);padding-bottom:4px;
+  border-bottom:1px solid var(--line);margin-bottom:4px}
+.log-row{display:flex;justify-content:space-between;align-items:flex-start;
+  gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:.8rem;
+  font-variant-numeric:tabular-nums}
+.log-row:first-child{border-top:0}
+.log-formula{flex:1;min-width:0;line-height:1.5;color:var(--ink)}
+.log-result{flex-shrink:0;font-weight:700;color:var(--acc);text-align:right;white-space:nowrap;line-height:1.5}
+.log-divider{border-top:2px solid var(--line);margin:4px 0}
 </style>
 </head>
 <body>
@@ -245,6 +257,14 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--acc);user-select:non
     <h2>3. 破片飛散距離（参考値）</h2>
     <div id="frag-out"><div class="empty">爆薬と数量を入力すると距離が表示されます。</div></div>
     <div class="warn" style="margin-top:10px;font-size:.82rem">⚠ 出典未確認の実務経験則です。参考値としてのみご利用ください。</div>
+  </section>
+
+  <section id="log-section" hidden>
+    <h2>4. 計算ログ</h2>
+    <details class="log-det" open>
+      <summary>📋 ステップ別計算式 ▾（タップで折りたたみ）</summary>
+      <div id="calc-log" style="margin-top:10px"></div>
+    </details>
   </section>
 
   <section>
@@ -532,13 +552,57 @@ function renderItems(){
 /* ═══════════════════════════════════
    Calc
 ═══════════════════════════════════ */
+function renderCalcLog(d){
+  const sec=$('log-section'), root=$('calc-log');
+  root.replaceChildren();
+  const addStep=(title,rows)=>{
+    const s=document.createElement('div'); s.className='log-step';
+    const t=document.createElement('div'); t.className='log-title'; t.textContent=title; s.appendChild(t);
+    rows.forEach(r=>{
+      const row=document.createElement('div'); row.className='log-row';
+      const f=document.createElement('div'); f.className='log-formula'; f.textContent=r[0];
+      const res=document.createElement('div'); res.className='log-result'; res.textContent=r[1];
+      row.append(f,res); s.appendChild(row);
+    });
+    root.appendChild(s);
+  };
+  // ① 爆薬ごとのTNT換算
+  addStep('① 爆薬ごとのTNT換算量', d.logRows.map(r=>[
+    r.name+'：'+r.q+' '+r.unit+(r.unit==='lb'?' × '+CFG.LB+' kg/lb':'')+' = '+r.kg.toPrecision(4)+' kg',
+    '× RE '+r.coef+' → '+r.w.toPrecision(4)+' kg'
+  ]));
+  // ② 合計
+  addStep('② 合計TNT量', [
+    ['W_TNT = Σ（各爆薬のTNT換算量）', d.wTnt.toPrecision(4)+' kg'],
+    ['W_lb = W_TNT ÷ '+CFG.LB, d.wLb.toPrecision(4)+' lb']
+  ]);
+  // ③ 立方根
+  addStep('③ 立方根', [
+    ['W_lb^(1/3)', d.cube.toPrecision(4)]
+  ]);
+  // ④ 距離（リューデンベルグ式）
+  const kRows=CFG.KS.map(lv=>[
+    lv.label+'：D = '+lv.k+' × '+d.cube.toPrecision(4)+(d.multi>1?' × 1.33':''),
+    Math.ceil(lv.k*d.cube*d.multi)+' m'
+  ]);
+  addStep('④ 退避距離（リューデンベルグ式・切り上げ）', kRows);
+  if(d.multi>1) addStep('⑤ 33%補正', [['複数爆薬同時爆轟として × 1.33', '適用']]);
+  // ⑥ 破片距離
+  addStep(d.multi>1?'⑥ 破片距離':'⑤ 破片距離', [
+    ['HFDR：313 × W_lb^0.206 = '+d.hfdrFt.toFixed(1)+' ft → × 0.3048 m/ft', d.hfdrM+' m'],
+    ['MFDR：3337 × W_lb^0.188 = '+d.mfdrFt.toFixed(1)+' ft → × 0.3048 m/ft', d.mfdrM+' m']
+  ]);
+  sec.hidden=false;
+}
+
 function calc(){
   const err=$('err'),out=$('out'),meta=$('meta');
   err.textContent=''; meta.textContent='';
+  $('log-section').hidden=true; $('calc-log').replaceChildren();
   $('save-row').hidden=true; $('save-msg').textContent='';
   const used=items.filter(it=>it.name.trim()||it.qty!=='');
   if(!used.length){ out.innerHTML='<div class="empty">爆薬と数量を入力すると距離が表示されます。</div>'; return; }
-  let wTnt=0; const parts=[];
+  let wTnt=0; const parts=[]; const logRows=[];
   for(const it of used){
     const no=items.indexOf(it)+1;
     if(!it.name.trim()){ err.textContent=no+'行目: 爆薬名を入力してください。'; out.replaceChildren(); return; }
@@ -548,6 +612,7 @@ function calc(){
     if(it.coef===''||!(coef>0)){ err.textContent=no+'行目「'+it.name+'」: RE係数を入力してください。'; out.replaceChildren(); return; }
     const kg=it.unit==='lb'?q*CFG.LB:q;
     const w=kg*coef; wTnt+=w;
+    logRows.push({name:it.name,q,unit:it.unit,kg,coef,w});
     parts.push(it.name+' '+q+' '+it.unit+' × RE'+coef+' → '+w.toPrecision(4)+' kg TNT');
   }
   const wLb=wTnt/CFG.LB, cube=Math.cbrt(wLb);
@@ -590,6 +655,8 @@ function calc(){
     row.append(left,right); fragWrap.appendChild(row);
   });
   fragOut.appendChild(fragWrap);
+
+  renderCalcLog({logRows,wTnt,wLb,cube,multi,hfdrFt,mfdrFt,hfdrM,mfdrM});
 
   // 保存用サマリ生成
   const expPart = parts.map(p=>p.split(' → ')[0]).join(' + ');
