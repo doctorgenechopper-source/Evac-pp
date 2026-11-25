@@ -111,6 +111,11 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 .preset-row{display:flex;align-items:center;gap:7px;padding:7px 2px}
 .preset-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc);flex-shrink:0}
 .preset-lbl{flex:1;font-size:.85rem}
+.pname{flex:1;min-width:0;font:inherit;font-size:.85rem;padding:5px 6px;border:1px solid var(--line);
+  border-radius:7px;background:var(--panel);color:var(--ink)}
+.pname:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.pdel{background:none;border:0;color:var(--sub);font-size:.95rem;padding:2px 4px;cursor:pointer}
+.pdel:hover{color:#dc2626}
 .pdist{width:70px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;
   background:var(--bg);color:var(--ink);font:inherit;font-size:.85rem;
   text-align:right;font-variant-numeric:tabular-nums}
@@ -163,11 +168,17 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 /* コンパス */
 #compass-widget{
   position:fixed;right:10px;
-  bottom:calc(env(safe-area-inset-bottom,0px)+130px);
-  z-index:400;cursor:pointer;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 140px);
+  z-index:400;cursor:pointer;text-align:center;
   filter:drop-shadow(0 2px 5px rgba(0,0,0,.2));
 }
-#compass-needle{transform-origin:28px 28px;transition:transform .15s linear}
+#compass-dial{transform-origin:28px 28px;transition:transform .15s linear}
+#compass-widget.off svg{opacity:.4}
+#compass-readout{
+  display:inline-block;margin-top:2px;padding:2px 8px;border-radius:10px;
+  background:var(--panel);border:1px solid var(--line);
+  font-size:.7rem;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;
+}
 </style>
 </head>
 <body>
@@ -178,24 +189,25 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 <div id="ctrl-left">
   <button class="ctrl-btn" id="area-btn">⚙ エリア設定</button>
   <button class="ctrl-btn" id="gps-btn">📍 現在地</button>
-  <button class="ctrl-btn" id="compass-btn">🧭 コンパス</button>
   <button class="ctrl-btn" id="clear-btn" hidden>🗑 クリア</button>
 </div>
 
 <!-- コンパスウィジェット（右下・常時北を指す） -->
-<div id="compass-widget" hidden title="タップで停止">
+<div id="compass-widget" class="off" title="タップで開始／停止">
   <svg viewBox="0 0 56 56" width="60" height="60">
     <circle cx="28" cy="28" r="27" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
-    <text x="28" y="11" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">N</text>
-    <text x="28" y="50" text-anchor="middle" font-size="8" fill="var(--sub)">S</text>
-    <text x="7"  y="31" text-anchor="middle" font-size="8" fill="var(--sub)">W</text>
-    <text x="49" y="31" text-anchor="middle" font-size="8" fill="var(--sub)">E</text>
-    <g id="compass-needle">
-      <polygon points="28,10 25,28 31,28" fill="#dc2626"/>
-      <polygon points="28,46 25,28 31,28" fill="var(--sub)" opacity=".5"/>
-      <circle cx="28" cy="28" r="2.5" fill="var(--ink)"/>
+    <!-- 文字盤（端末の向きに応じて回転し、N が実際の北を指す） -->
+    <g id="compass-dial">
+      <text x="28" y="11" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">N</text>
+      <text x="28" y="50" text-anchor="middle" font-size="8" fill="var(--sub)">S</text>
+      <text x="7"  y="31" text-anchor="middle" font-size="8" fill="var(--sub)">W</text>
+      <text x="49" y="31" text-anchor="middle" font-size="8" fill="var(--sub)">E</text>
     </g>
+    <!-- 固定の目印（今向いている方向） -->
+    <polygon points="28,1 25,6 31,6" fill="var(--ink)"/>
+    <circle cx="28" cy="28" r="2" fill="var(--ink)"/>
   </svg>
+  <div id="compass-readout">タップで開始</div>
 </div>
 
 <!-- 右上: 航空写真・表示設定・情報ウィンドウ -->
@@ -244,27 +256,8 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
           <button id="preset-load-open">📋 読込</button>
         </div>
       </div>
-      <div class="preset-row">
-        <input type="checkbox" id="cb-solid" checked>
-        <span class="swatch" style="background:#0ea5e930;border-color:#0ea5e9"></span>
-        <span class="preset-lbl">強固な処分壕</span>
-        <input type="number" class="pdist" id="dist-solid" min="0" placeholder="距離">
-        <span class="unit">m</span>
-      </div>
-      <div class="preset-row">
-        <input type="checkbox" id="cb-simple" checked>
-        <span class="swatch" style="background:#10b98130;border-color:#10b981"></span>
-        <span class="preset-lbl">簡易な処分壕</span>
-        <input type="number" class="pdist" id="dist-simple" min="0" placeholder="距離">
-        <span class="unit">m</span>
-      </div>
-      <div class="preset-row">
-        <input type="checkbox" id="cb-chamber" checked>
-        <span class="swatch" style="background:#f9731630;border-color:#f97316"></span>
-        <span class="preset-lbl">チャンバー</span>
-        <input type="number" class="pdist" id="dist-chamber" min="0" placeholder="距離">
-        <span class="unit">m</span>
-      </div>
+      <div id="preset-rows"></div>
+      <button id="preset-add" style="margin:4px 0 6px">＋ 規定値を追加</button>
       <div class="preset-row">
         <input type="checkbox" id="cb-surface" checked>
         <span class="swatch swatch-dash" style="border-color:#dc2626"></span>
@@ -394,13 +387,65 @@ $('cb-k61').checked=calcCfg.k61; $('cb-k100').checked=calcCfg.k100;
 $('cb-hfdr').checked=calcCfg.hfdr; $('cb-mfdr').checked=calcCfg.mfdr;
 
 // ── 規定値設定復元 ────────────────────────────
+// 規定値（任意の名称・距離、同時表示は PRESET_MAX_ON 件まで）
+let presetItems=[];
+function normalizePresetItems(cfg){
+  let items;
+  if(Array.isArray(cfg.items)){
+    items=cfg.items.map(x=>({name:String(x.name??''),dist:String(x.dist??''),en:!!x.en}));
+  }else{ // 旧形式（固定3種）からの移行
+    items=[
+      {name:'強固な処分壕',dist:cfg.solid?.dist||'',   en:!!cfg.solid?.en},
+      {name:'簡易な処分壕',dist:cfg.simple?.dist||'',  en:!!cfg.simple?.en},
+      {name:'チャンバー',  dist:cfg.chamber?.dist||'', en:!!cfg.chamber?.en}
+    ];
+  }
+  let on=0; items.forEach(it=>{ if(it.en){ if(on>=PRESET_MAX_ON) it.en=false; else on++; } });
+  return items;
+}
+function presetOnCount(){ return presetItems.filter(it=>it.en).length; }
+function renderPresetRows(){
+  const box=$('preset-rows'); box.replaceChildren();
+  presetItems.forEach((it,i)=>{
+    const row=document.createElement('div'); row.className='preset-row';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=it.en;
+    cb.addEventListener('change',()=>{
+      if(cb.checked && presetOnCount()>=PRESET_MAX_ON){
+        cb.checked=false;
+        alert('同時表示は'+PRESET_MAX_ON+'つまでです。ほかの規定値をオフにしてください。');
+        return;
+      }
+      it.en=cb.checked; onSettingChange();
+    });
+    const c=PRESET_PALETTE[i%PRESET_PALETTE.length];
+    const sw=document.createElement('span'); sw.className='swatch';
+    sw.style.cssText=`background:${c}30;border-color:${c}`;
+    const nm=document.createElement('input'); nm.type='text'; nm.className='pname';
+    nm.value=it.name; nm.maxLength=20; nm.placeholder='名称';
+    nm.addEventListener('input',()=>{ it.name=nm.value; onSettingChange(); });
+    const ds=document.createElement('input'); ds.type='number'; ds.className='pdist';
+    ds.min='0'; ds.placeholder='距離'; ds.value=it.dist;
+    ds.addEventListener('input',()=>{ it.dist=ds.value; onSettingChange(); });
+    const u=document.createElement('span'); u.className='unit'; u.textContent='m';
+    const del=document.createElement('button'); del.className='pdel'; del.textContent='✕'; del.title='削除';
+    del.addEventListener('click',()=>{
+      if(!confirm('「'+(it.name||'規定値')+'」を削除しますか？')) return;
+      presetItems.splice(i,1); renderPresetRows(); onSettingChange();
+    });
+    row.append(cb,sw,nm,ds,u,del); box.appendChild(row);
+  });
+}
+$('preset-add').addEventListener('click',()=>{
+  presetItems.push({name:'規定値'+(presetItems.length+1),dist:'',en:presetOnCount()<PRESET_MAX_ON});
+  renderPresetRows(); onSettingChange();
+});
+
 const prCfg=ls(KEY_PRST_CFG)||{sec:true,
-  solid:{en:true,dist:''},simple:{en:true,dist:''},chamber:{en:true,dist:''},
+  items:[{name:'強固な処分壕',dist:'',en:true},{name:'簡易な処分壕',dist:'',en:true},{name:'チャンバー',dist:'',en:true}],
   surface:{en:true,mode:'calc',dist:''}};
 $('cb-preset-sec').checked=prCfg.sec;
-$('cb-solid').checked=prCfg.solid.en;    $('dist-solid').value=prCfg.solid.dist||'';
-$('cb-simple').checked=prCfg.simple.en;  $('dist-simple').value=prCfg.simple.dist||'';
-$('cb-chamber').checked=prCfg.chamber.en;$('dist-chamber').value=prCfg.chamber.dist||'';
+presetItems=normalizePresetItems(prCfg);
+renderPresetRows();
 $('cb-surface').checked=prCfg.surface.en;
 if(prCfg.surface.mode==='manual'){ $('surf-manual').checked=true; $('dist-surface').disabled=false; }
 $('dist-surface').value=prCfg.surface.dist||'';
@@ -414,7 +459,7 @@ const layerGSI=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{
   attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',maxZoom:18});
 // 航空写真用の道路オーバーレイ（透過）。道路名・道路線を重ねて見やすくする
 const layerRoads=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{
-  attribution:'Tiles © Esri',maxZoom:19,opacity:0.9});
+  attribution:'Tiles © Esri',maxZoom:19,maxNativeZoom:17,opacity:0.9});  // 17超は17のタイルを拡大表示
 let curLayer='osm'; layerOSM.addTo(map);
 
 // ベースマップ切り替え（'gsi' = 航空写真＋道路 / 'osm' = 標準地図）
@@ -445,17 +490,14 @@ function saveCalcCfg(){
 }
 function getCurrentPresetCfg(){
   return {sec:$('cb-preset-sec').checked,
-    solid:{en:$('cb-solid').checked,dist:$('dist-solid').value},
-    simple:{en:$('cb-simple').checked,dist:$('dist-simple').value},
-    chamber:{en:$('cb-chamber').checked,dist:$('dist-chamber').value},
+    items:presetItems.map(it=>({name:it.name,dist:it.dist,en:it.en})),
     surface:{en:$('cb-surface').checked,mode:$('surf-manual').checked?'manual':'calc',dist:$('dist-surface').value}};
 }
 function savePrCfg(){ lsS(KEY_PRST_CFG,getCurrentPresetCfg()); }
 function applyPresetCfg(cfg){
   $('cb-preset-sec').checked=cfg.sec;
-  $('cb-solid').checked=cfg.solid.en;    $('dist-solid').value=cfg.solid.dist||'';
-  $('cb-simple').checked=cfg.simple.en;  $('dist-simple').value=cfg.simple.dist||'';
-  $('cb-chamber').checked=cfg.chamber.en;$('dist-chamber').value=cfg.chamber.dist||'';
+  presetItems=normalizePresetItems(cfg);
+  renderPresetRows();
   $('cb-surface').checked=cfg.surface.en;
   if(cfg.surface.mode==='manual'){ $('surf-manual').checked=true; $('dist-surface').disabled=false; }
   else{ $('surf-calc').checked=true; $('dist-surface').disabled=true; }
@@ -470,11 +512,8 @@ const CALC_DEF=[
   {id:'hfdr',label:'HFDR',               color:'#3b82f6',fill:.08,dash:'6 4'},
   {id:'mfdr',label:'MFDR',               color:'#8b5cf6',fill:.06,dash:'8 5'},
 ];
-const PRESET_DEF=[
-  {id:'solid',  label:'強固な処分壕', color:'#0ea5e9',fill:.12},
-  {id:'simple', label:'簡易な処分壕', color:'#10b981',fill:.12},
-  {id:'chamber',label:'チャンバー',   color:'#f97316',fill:.12},
-];
+const PRESET_PALETTE=['#0ea5e9','#10b981','#f97316','#a855f7','#eab308','#ec4899','#14b8a6'];
+const PRESET_MAX_ON=3;   // 同時表示の上限
 
 function updateSurfaceBadge(){
   const d=ls('eod-map-data');
@@ -493,10 +532,10 @@ function getAllCircles(){
     });
   }
   if($('cb-preset-sec').checked){
-    PRESET_DEF.forEach(def=>{
-      const dist=parseFloat($('dist-'+def.id).value);
-      if($('cb-'+def.id).checked && dist>0)
-        result.push({label:def.label,dist,color:def.color,fill:def.fill});
+    presetItems.forEach((it,i)=>{
+      const dist=parseFloat(it.dist);
+      if(it.en && dist>0)
+        result.push({label:it.name||'規定値',dist,color:PRESET_PALETTE[i%PRESET_PALETTE.length],fill:.12});
     });
     if($('cb-surface').checked){
       let dist=$('surf-manual').checked ? parseFloat($('dist-surface').value)||0
@@ -642,15 +681,15 @@ $('settings-ov').addEventListener('click',e=>{ if(e.target===$('settings-ov')) $
 
 function onSettingChange(){ saveCalcCfg(); savePrCfg(); updateLegend(); if(marker) setPoint(marker.getLatLng(),true); }
 ['cb-calc-sec','cb-k16','cb-k61','cb-k100','cb-hfdr','cb-mfdr',
- 'cb-preset-sec','cb-solid','cb-simple','cb-chamber','cb-surface'].forEach(id=>$(id).addEventListener('change',onSettingChange));
-['dist-solid','dist-simple','dist-chamber','dist-surface'].forEach(id=>$(id).addEventListener('input',onSettingChange));
+ 'cb-preset-sec','cb-surface'].forEach(id=>$(id).addEventListener('change',onSettingChange));
+['dist-surface'].forEach(id=>$(id).addEventListener('input',onSettingChange));
 document.querySelectorAll('[name=surf-mode]').forEach(r=>r.addEventListener('change',()=>{
   $('dist-surface').disabled=$('surf-calc').checked; onSettingChange();
 }));
 
 // ── 規定値プリセット ─────────────────────────
 function getPresetSummary(){
-  const p=[]; PRESET_DEF.forEach(def=>{ const d=parseFloat($('dist-'+def.id).value); if($('cb-'+def.id).checked&&d>0) p.push(def.label+' '+d+'m'); });
+  const p=[]; presetItems.forEach(it=>{ const d=parseFloat(it.dist); if(it.en&&d>0) p.push((it.name||'規定値')+' '+d+'m'); });
   if($('cb-surface').checked){ const d=$('surf-manual').checked?parseFloat($('dist-surface').value)||0:ls('eod-map-data')?.circles?.[2]?.dist||0; if(d>0) p.push('地表爆破 '+d+'m'); }
   return p.join(' / ')||'（距離未入力）';
 }
@@ -761,29 +800,51 @@ $('scene-hist-close').addEventListener('click',()=>$('scene-hist-ov').classList.
 $('scene-hist-ov').addEventListener('click',e=>{ if(e.target===$('scene-hist-ov')) $('scene-hist-ov').classList.remove('open'); });
 
 // ── コンパス ─────────────────────────────────
+// 常時表示。タップで開始／停止。文字盤を回して N が実際の北を指し、上の目印が向いている方向
 let compassActive = false;
+let compassEvt = null;
+let compassTimer = null;
+let compassLast = -1;
+const CARDINALS = ['北','北東','東','南東','南','南西','西','北西'];
+
+function setCompassReadout(h){
+  const deg = Math.round(h) % 360;
+  if(deg === compassLast) return;
+  compassLast = deg;
+  $('compass-readout').textContent = CARDINALS[Math.round(deg / 45) % 8] + ' ' + deg + '°';
+}
 
 function handleOrientation(e){
-  let heading;
-  if(e.webkitCompassHeading !== undefined){ heading = e.webkitCompassHeading; }       // iOS
-  else if(e.alpha !== null){ heading = (360 - e.alpha) % 360; }                        // Android
-  if(heading === undefined) return;
-  const needle = $('compass-needle');
-  if(needle) needle.style.transform = `rotate(${-heading}deg)`;
+  let h;
+  if(typeof e.webkitCompassHeading === 'number' && e.webkitCompassHeading >= 0){
+    h = e.webkitCompassHeading;                  // iOS（北基準）
+  } else if(e.alpha !== null && e.alpha !== undefined){
+    h = (360 - e.alpha) % 360;                   // Android（absolute なら磁北基準）
+  } else {
+    return;
+  }
+  if(compassTimer){ clearTimeout(compassTimer); compassTimer = null; }
+  $('compass-dial').style.transform = `rotate(${-h}deg)`;
+  setCompassReadout(h);
 }
 
 function startCompass(){
   const go = () => {
-    window.addEventListener('deviceorientation', handleOrientation, true);
+    compassEvt = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.addEventListener(compassEvt, handleOrientation, true);
     compassActive = true;
-    $('compass-widget').hidden = false;
-    $('compass-btn').textContent = '🧭 停止';
+    compassLast = -1;
+    $('compass-widget').classList.remove('off');
+    $('compass-readout').textContent = '取得中…';
+    compassTimer = setTimeout(() => {
+      $('compass-readout').textContent = '方位を取得できません';
+    }, 3000);
   };
   if(typeof DeviceOrientationEvent === 'undefined'){
     alert('このデバイスはコンパスに対応していません。'); return;
   }
   if(typeof DeviceOrientationEvent.requestPermission === 'function'){
-    // iOS 13+ は許可が必要
+    // iOS 13+ は許可が必要（タップ操作の中で呼ぶ必要あり）
     DeviceOrientationEvent.requestPermission()
       .then(res => {
         if(res === 'granted') go();
@@ -794,14 +855,15 @@ function startCompass(){
 }
 
 function stopCompass(){
-  window.removeEventListener('deviceorientation', handleOrientation, true);
+  if(compassEvt) window.removeEventListener(compassEvt, handleOrientation, true);
+  if(compassTimer){ clearTimeout(compassTimer); compassTimer = null; }
   compassActive = false;
-  $('compass-widget').hidden = true;
-  $('compass-btn').textContent = '🧭 コンパス';
+  $('compass-widget').classList.add('off');
+  $('compass-dial').style.transform = '';
+  $('compass-readout').textContent = 'タップで開始';
 }
 
-$('compass-btn').addEventListener('click', () => { compassActive ? stopCompass() : startCompass(); });
-$('compass-widget').addEventListener('click', stopCompass);
+$('compass-widget').addEventListener('click', () => { compassActive ? stopCompass() : startCompass(); });
 
 // ── エリア設定 ───────────────────────────────
 $('area-btn').addEventListener('click',()=>$('area-ov').classList.add('open'));
