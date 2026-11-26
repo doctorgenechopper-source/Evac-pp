@@ -457,18 +457,15 @@ const layerOSM=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19});
 const layerGSI=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',{
   attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',maxZoom:18});
-// 航空写真用の道路オーバーレイ（透過）。道路名・道路線を重ねて見やすくする
-const layerRoads=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{
-  attribution:'Tiles © Esri',maxZoom:19,maxNativeZoom:17,opacity:0.9});  // 17超は17のタイルを拡大表示
 let curLayer='osm'; layerOSM.addTo(map);
 
 // ベースマップ切り替え（'gsi' = 航空写真＋道路 / 'osm' = 標準地図）
 function setBase(mode){
   if(mode==='gsi'){
-    map.removeLayer(layerOSM); layerGSI.addTo(map); layerRoads.addTo(map);
+    map.removeLayer(layerOSM); layerGSI.addTo(map);
     curLayer='gsi'; $('layer-btn').textContent='🗺 地図に戻す';
   }else{
-    map.removeLayer(layerGSI); map.removeLayer(layerRoads); layerOSM.addTo(map);
+    map.removeLayer(layerGSI); layerOSM.addTo(map);
     curLayer='osm'; $('layer-btn').textContent='📷 航空写真';
   }
 }
